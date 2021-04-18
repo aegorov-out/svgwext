@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	
+	<Fragment>
+
+		<WixVariable Id="WixUILicenseRtf" Value="Res\gpl-3.0.rtf"/>
+		<WixVariable Id="WixUIBannerBmp" Value="Res\Banner.png"/>
+		<WixVariable Id="WixUIDialogBmp" Value="Res\Dialog.png"/>
+		<WixVariable Id="WixUIExclamationIco" Value="Res\Exclamation.ico"/>
+		<WixVariable Id="WixUIInfoIco" Value="Res\Info.ico"/>
+		<WixVariable Id="WixUINewIco" Value="Res\NewFolder.ico"/>
+		<WixVariable Id="WixUIUpIco" Value="Res\UpFolder.ico"/>
+		
+		<UI Id="UISequence">
+
+			<TextStyle Id="WixUI_Font_Normal" FaceName="Segoe UI" Size="9"/>
+			<TextStyle Id="WixUI_Font_Bigger" FaceName="Segoe UI" Size="12" Red="44" Green="88" Blue="132"/>
+			<TextStyle Id="WixUI_Font_Title" FaceName="Segoe UI" Size="10" Bold="yes" Red="44" Green="88" Blue="132"/>
+			<Property Id="DefaultUIFont" Value="WixUI_Font_Normal"/>
+			
+			<DialogRef Id="ErrorDlg"/>
+			<DialogRef Id="FatalError"/>
+			<DialogRef Id="FilesInUse"/>
+			<DialogRef Id="MsiRMFilesInUse"/>
+			<DialogRef Id="PrepareDlg"/>
+			<DialogRef Id="ProgressDlg"/>
+			<DialogRef Id="ResumeDlg"/>
+			<DialogRef Id="UserExit"/>
+
+			<Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
+
+			<Publish Dialog="UIWelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg">NOT Installed</Publish>
+			<Publish Dialog="UIWelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">Installed AND PATCH</Publish>
+
+			<Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="1">Installed</Publish>
+			<Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="UIWelcomeDlg" Order="2">NOT Installed</Publish>
+			<Publish Dialog="CustomizeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+
+			<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CustomizeDlg" Order="1">NOT Installed OR WixUI_InstallMode = "Change"</Publish>
+			<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2">Installed AND NOT PATCH</Publish>
+			<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="UIWelcomeDlg" Order="3">Installed AND PATCH</Publish>
+
+			<Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg">1</Publish>
+
+			<Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Event="NewDialog" Value="CustomizeDlg">1</Publish>
+			<Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+			<Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+			<Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg">1</Publish>
+
+		</UI>
+		
+		<UIRef Id="WixUI_Common"/>
+	</Fragment>
+	
+</Wix>

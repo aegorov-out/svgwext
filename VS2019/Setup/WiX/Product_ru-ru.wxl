@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="ru-ru" Codepage="1251" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+	<String Id="Language">1049</String>
+	<String Id="Codepage">1251</String>
+   
+	<String Id="AuthorName">Александр Егоров</String>
+
+	<String Id="DowngradeError">Более новая версия [ProductName] уже установлена на этом компьютере.</String>
+	<String Id="x64Required">Для установки [ProductName] требуется 64-битная версия Windows.</String>
+	<String Id="x86Required">Для установки [ProductName] требуется 32-битная версия Windows.</String>
+	<String Id="Win1703Required">Для установки [ProductName] требуется Windows 10 Creators Update (1703) или выше.</String>
+
+	<String Id="MainProgram">Основные файлы</String>
+	<String Id="MainProgramDescr">Основные программные файлы и Windows Imaging Component (WIC) декодер SVG/WMF/EMF.</String>
+	<String Id="SVGDecoder">Декодер SVG</String>
+	<String Id="WMFDecoder">Декодер WMF/EMF</String>
+	<String Id="SVGThumbs">Эскизы SVG</String>
+	<String Id="SVGThumbsDescr">Эскизы SVG для проводника Windows.</String>
+	<String Id="WMFThumbs">Эскизы WMF/EMF</String>
+	<String Id="WMFThumbsDescr">Эскизы WMF/EMF для проводника Windows.</String>
+
+	<String Id="PermissionTextFile">LicPermission_ru-ru.txt</String>
+	<String Id="WelcomePrompt">Нажмите "Далее", чтобы продолжить, или "Отмена", чтобы выйти из мастера установки.</String>
+	
+</WixLocalization>

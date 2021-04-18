@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" Codepage="1252" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+	<String Id="Language">1033</String>
+	<String Id="Codepage">1252</String>
+   
+	<String Id="AuthorName">Alexandre Egorov</String>
+
+	<String Id="DowngradeError">A newer version of [ProductName] is already installed.</String>
+	<String Id="x64Required">[ProductName] requires 64-bit version of Windows.</String>
+	<String Id="x86Required">[ProductName] requires 32-bit version of Windows.</String>
+	<String Id="Win1703Required">[ProductName] requires Windows 10 Creators Update (1703) or newer.</String>
+
+	<String Id="MainProgram">Main program files</String>
+	<String Id="MainProgramDescr">Main program files and Windows Imaging Component (WIC) SVG/WMF/EMF decoders.</String>
+	<String Id="SVGDecoder">SVG decoder</String>
+	<String Id="WMFDecoder">WMF/EMF decoder</String>
+	<String Id="SVGThumbs">SVG thumbnail provider</String>
+	<String Id="SVGThumbsDescr">SVG thumbnail provider for File Explorer.</String>
+	<String Id="WMFThumbs">WMF/EMF thumbnail provider</String>
+	<String Id="WMFThumbsDescr">WMF/EMF thumbnail provider for File Explorer.</String>
+
+	<String Id="PermissionTextFile">LicPermission_en-us.txt</String>
+	<String Id="WelcomePrompt">Click Next to install [ProductName] or Cancel to exit the Wizard.</String>
+	
+</WixLocalization>

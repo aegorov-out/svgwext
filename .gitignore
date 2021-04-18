@@ -1,0 +1,30 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Static libraries
+*.lib
+*.exp
+
+# Temporary and hidden
+*./
+.*
+_*
+
+# Tools
+*.bat
+*.cmd
+*.vbs
+
+
+# Explicitly included
+!.git*
+!.md
+!*.dll
+!*.msi

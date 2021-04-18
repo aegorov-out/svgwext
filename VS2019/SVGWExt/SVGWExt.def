@@ -1,0 +1,11 @@
+LIBRARY	"svgwext"
+
+EXPORTS
+	DllGetVersion		PRIVATE
+	DllRegisterServer	PRIVATE
+	DllUnregisterServer	PRIVATE
+	DllInstall			PRIVATE
+	DllGetClassObject	PRIVATE
+	DllCanUnloadNow		PRIVATE
+
+	RunDllInstall		PRIVATE
