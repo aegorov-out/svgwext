@@ -51,6 +51,9 @@
 <?define RegPath_WICDecoders="CLSID\{7ED96837-96F0-4812-B211-F13C24117ED3}\Instance"?>
 <?define RegPath_ThumbExt="ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"?>
 
+<?define InstallLevel = "9"?>
+<?define NoInstallLevel = "11"?>
+
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 	<Product Id="$(var.ProductId)" Name="$(var.ProductName) $(var.PlatformUIText)" Version="$(var.ProductVersion).0"
@@ -97,7 +100,7 @@
 			<ComponentSearch Id="MainFilesDir" Guid="$(var.MainFilesGuid)" Type="directory"/>
 		</Property>
 
-		<Property Id="INSTALLLEVEL" Value="9"/>
+		<Property Id="INSTALLLEVEL" Value="$(var.InstallLevel)"/>
 
 		<PropertyRef Id="WMZKINDSET"/>
 		<PropertyRef Id="EMZKINDSET"/>
@@ -132,7 +135,7 @@
 				<File Id="MainDll" Name="$(var.KeyName).dll" KeyPath="yes" Vital="yes" Checksum="yes" Source="$(var.FileSourcePath)\$(var.KeyName).dll"/>
 			</Component>
 			<Component Id="DocFiles" Guid="$(var.DocFilesGuid)">
-				<File Id="GplText" Source="Res\gpl-3.0.txt"/>
+				<File Id="LicenseTxt" Name="License.txt" ShortName="License.txt" Source="Res\gpl-3.0.txt"/>
 				<File Id="SourceUrl" Name="Source repository.url" ShortName="Source.url" Source="Res\SourceUrl.url"/>
 				<File Id="SourceZipUrl" Name="Download source.url" ShortName="SrcZip.url" Source="Res\SourceZip.url"/>
 			</Component>
@@ -173,9 +176,9 @@
 					<RegistryValue Type="string" Value="!(loc.WMFDecoder)"/>
 					<RegistryValue Type="string" Name="Author" Value="!(loc.AuthorName)"/>
 					<RegistryValue Type="string" Name="ContainerFormat" Value="$(var.GUID_ContainerFormatWmf)"/>
-					<RegistryValue Type="string" Name="FileExtensions" Value=".svg,.svgz"/>
-					<RegistryValue Type="string" Name="FriendlyName" Value="!(loc.SVGDecoder)"/>
-					<RegistryValue Type="string" Name="MimeTypes" Value="image/svg+xml"/>
+					<RegistryValue Type="string" Name="FileExtensions" Value=".emf,.wmf,.emz,.wmz"/>
+					<RegistryValue Type="string" Name="FriendlyName" Value="!(loc.WMFDecoder)"/>
+					<RegistryValue Type="string" Name="MimeTypes" Value="image/x-wmf,image/x-emf"/>
 					<RegistryValue Type="string" Name="Vendor" Value="$(var.GUID_AE_VendorID)"/>
 					<RegistryValue Type="integer" Name="SupportAnimation" Value="0"/>
 					<RegistryValue Type="integer" Name="SupportChromaKey" Value="1"/>
@@ -217,9 +220,9 @@
 					<RegistryKey Key="Formats\(var.GUID_WICPixelFormat32bppPBGRA)" ForceCreateOnInstall="yes"/>
 				</RegistryKey>
 
-				<RegistryKey Root="HKCR" Key="$(var.RegPath_WICDecoders)\$(var.CLSID_SvgDecoder)" ForceDeleteOnUninstall="yes">
-					<RegistryValue Type="string" Name="CLSID" Value="$(var.CLSID_SvgDecoder)"/>
-					<RegistryValue Type="string" Name="FriendlyName" Value="!(loc.SVGDecoder)"/>
+				<RegistryKey Root="HKCR" Key="$(var.RegPath_WICDecoders)\$(var.CLSID_WmfDecoder)" ForceDeleteOnUninstall="yes">
+					<RegistryValue Type="string" Name="CLSID" Value="$(var.CLSID_WmfDecoder)"/>
+					<RegistryValue Type="string" Name="FriendlyName" Value="!(loc.WMFDecoder)"/>
 				</RegistryKey>
 				
 			</Component>
@@ -264,7 +267,7 @@
 			<ComponentRef Id="SVGThumbs"/>
 			<ComponentRef Id="SVGTypes"/>
 			
-			<Condition Level="0"><![CDATA[Installed AND (NOT SVGTHUMBSIN)]]></Condition>
+			<Condition Level="$(var.NoInstallLevel)"><![CDATA[Installed AND (NOT SVGTHUMBSIN)]]></Condition>
 			
 		</Feature>
 	</Fragment>
@@ -301,7 +304,7 @@
 			<ComponentRef Id="WMFThumbs"/>
 			<ComponentGroupRef Id="WMFAllTypes"/>
 
-			<Condition Level="0"><![CDATA[Installed AND (NOT WMFTHUMBSIN)]]></Condition>
+			<Condition Level="$(var.NoInstallLevel)"><![CDATA[Installed AND (NOT WMFTHUMBSIN)]]></Condition>
 			
 		</Feature>
 		

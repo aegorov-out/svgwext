@@ -234,6 +234,7 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 	{
 		if (svgDoc)
 		{
+			bool noViewBox = false;
 			ID2D1SvgElement* svgRoot;
 			D2D1_SVG_VIEWBOX viewBox;
 			D2D1_SVG_LENGTH width, height;
@@ -241,8 +242,10 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 			svgDoc->GetRoot(&svgRoot);
 
 			if (S_OK != svgRoot->GetAttributeValue(L"viewBox", D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, &viewBox, sizeof(viewBox)))
+			{
+				noViewBox = true;
 				ZeroStruct(&viewBox);
-
+			}
 			if (S_OK != svgRoot->GetAttributeValue(L"width", &width))
 				width.value = viewBox.width;
 			else if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == width.units)
@@ -255,6 +258,26 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 
 			if (removeSize)
 			{
+				if (noViewBox)
+				{
+					D2D1_SVG_LENGTH x, y;
+					ASSUME(0 == viewBox.x && 0 == viewBox.y);
+					if (S_OK == svgRoot->GetAttributeValue(L"x", &x))
+					{
+						viewBox.x = x.value;
+						if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == x.units)
+							viewBox.x /= 100;
+					}
+					if (S_OK == svgRoot->GetAttributeValue(L"y", &y))
+					{
+						viewBox.y = y.value;
+						if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == y.units)
+							viewBox.y /= 100;
+					}
+					viewBox.width = width.value;
+					viewBox.height = height.value;
+					svgRoot->SetAttributeValue(L"viewBox", D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, &viewBox, sizeof(viewBox));
+				}
 				svgRoot->RemoveAttribute(L"x");
 				svgRoot->RemoveAttribute(L"y");
 				svgRoot->RemoveAttribute(L"width");

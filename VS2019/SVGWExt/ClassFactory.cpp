@@ -116,23 +116,19 @@ _Check_return_ STDAPI DllGetClassObject(_In_ REFCLSID rclsid, _In_ REFIID riid, 
 		if (SUCCEEDED(hr))
 		{
 			ServComp ctype;
-			if (CLSID_SvgThumbnailProvider == riid)
+			if (IsEqualCLSID(rclsid, CLSID_SvgThumbnailProvider))
 				ctype = ServComp::SvgThumbProvider;
-			else if (CLSID_WmfEmfThumbnailProvider == riid)
+			else if (IsEqualCLSID(rclsid, CLSID_WmfEmfThumbnailProvider))
 				ctype = ServComp::WmfThumbProvider;
-			else if (CLSID_SvgDecoder == riid)
+			else if (IsEqualCLSID(rclsid, CLSID_SvgDecoder))
 				ctype = ServComp::SvgDecoder;
-			else if (CLSID_WmfEmfDecoder == riid)
+			else if (IsEqualCLSID(rclsid, CLSID_WmfEmfDecoder))
 				ctype = ServComp::WmfDecoder;
 			else
 				return CLASS_E_CLASSNOTAVAILABLE;
 			hr = E_NOINTERFACE;
 			if (IsEqualGUID2(riid, IID_IClassFactory, IID_IUnknown))
-			{
-				hr = E_OUTOFMEMORY;
-				if (*ppv = static_cast<IClassFactory*>(new DllClassFactory(ctype, 1)))
-					return S_OK;
-			}
+				hr = (*ppv = static_cast<IClassFactory*>(new DllClassFactory(ctype, 1))) ? S_OK : E_OUTOFMEMORY;
 		}
 	}
 	return hr;

@@ -75,7 +75,7 @@ WCXFASTAPI_(bool_t) wcAsciiIsEqual(_In_opt_ PCWSTR szWide, _In_opt_ PCSTR szAsci
 }
 
 
-WCXCDECLAPI_(bool_t) wcAsciiIsEqualV(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...)
+WCXCAPI_(bool_t) wcAsciiIsAnyEqual(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...)
 {
 	va_list vaArgs;
 	va_start(vaArgs, cArgs);
@@ -252,7 +252,7 @@ NOALIAS HRESULT __cdecl QueryInterfaceImpl_(REFIID riid, _COM_Outptr_ void** ppv
 		{
 			const __m128i objid = _mm_loadu_si128((const __m128i*)va_arg(vArgs, const IID*));
 			IUnknown* const pobj = va_arg(vArgs, IUnknown*);
-			if (qiid != objid && (ind || _mm_loadu_si128((const __m128i*)&IID_IUnknown) != objid))
+			if (qiid != objid && (ind || _mm_loadu_si128((const __m128i*)&IID_IUnknown) != qiid))
 				continue;
 			*ppvObject = pobj;
 			hr = S_OK;

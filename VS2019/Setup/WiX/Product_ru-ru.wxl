@@ -11,7 +11,7 @@
 	<String Id="Win1703Required">Для установки [ProductName] требуется Windows 10 Creators Update (1703) или выше.</String>
 
 	<String Id="MainProgram">Основные файлы</String>
-	<String Id="MainProgramDescr">Основные программные файлы и Windows Imaging Component (WIC) декодер SVG/WMF/EMF.</String>
+	<String Id="MainProgramDescr">Основные программные файлы и WIC декодер для SVG/WMF/EMF.</String>
 	<String Id="SVGDecoder">Декодер SVG</String>
 	<String Id="WMFDecoder">Декодер WMF/EMF</String>
 	<String Id="SVGThumbs">Эскизы SVG</String>
@@ -21,5 +21,7 @@
 
 	<String Id="PermissionTextFile">LicPermission_ru-ru.txt</String>
 	<String Id="WelcomePrompt">Нажмите "Далее", чтобы продолжить, или "Отмена", чтобы выйти из мастера установки.</String>
+
+	<String Id="CustomizeDlgLocationLabel">Установить в:</String>
 	
 </WixLocalization>

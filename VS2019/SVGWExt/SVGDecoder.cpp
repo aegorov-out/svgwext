@@ -16,6 +16,9 @@ _Success_(return == S_OK) NOALIAS
 HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
 		_COM_Outptr_result_nullonfailure_ ID2D1SvgDocument** ppSvg, _Out_ D2D_SIZE_F* pSize)
 {
+	/*CHAR _steps[256];
+	_steps[0] = 0;*/
+
 	IStream* pstmInf;
 	HRESULT hr = wcUncompressStream(pstm, FALSE, &pstmInf);
 	if (S_OK == hr)
@@ -25,15 +28,19 @@ HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 	else
 		goto Error_;
 
+	//strcpy(_steps, ">Begin");
 	hr = CreateD2DC(ppDC);
 	if (S_OK == hr)
 	{
+		//strcat(_steps, " CreateD2DC");
 		hr = (*ppDC)->CreateSvgDocument(pstm, InitialSvgSize(), ppSvg);
 		if (S_OK == hr)
 		{
+			//strcat(_steps, " CreateSvgDocument");
 			hr = wcUpdateSvgSize(*ppSvg, true, pSize);
 			if (S_OK == hr)
 			{
+				//strcat(_steps, " wcUpdateSvgSize...OK!");
 				pstm->Release();
 				return S_OK;
 			}
@@ -44,6 +51,8 @@ HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 	pstm->Release();
 
 Error_:
+	//wcLogWriteLn("SVG load error");
+	//wcLogFormatStat(pstm, ": 0x%.8X (%s)\r\n", hr, _steps);
 	Zero8Bytes(pSize);
 	*ppSvg = nullptr;
 	*ppDC = nullptr;

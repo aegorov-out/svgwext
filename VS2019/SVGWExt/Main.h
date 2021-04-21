@@ -125,6 +125,17 @@ void ReleaseGlobalFactories();
 void ReleaseXmlGlobals();
 
 
+#ifdef WCX_ENABLE_LOG
+#define LOGGING	1
+bool IsDllLogging();
+HRESULT __fastcall wcLogCreate(_In_opt_ PCWSTR szFileName = nullptr);
+void wcLogClose();
+#else
+#define LOGGING	0
+#define IsDllLogging()	false
+#endif
+
+
 ///////////////////////////////////////////////////////////////////////
 // Image utilities ////////////////////////////////////////////////////
 

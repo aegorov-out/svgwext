@@ -82,10 +82,10 @@
     <Error Text="The WiX Toolset v3.11 (or newer) build tools must be installed to build this project. To download the WiX Toolset, see http://wixtoolset.org/releases/" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent />
+    <PreBuildEvent />
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent />
+    <PostBuildEvent>cscript.exe "$(ProjectDir)PostBuild.vbs" "!(TargetPath)" "$(TargetDir)"</PostBuildEvent>
   </PropertyGroup>
   <!--
 	To modify your build process, add your task inside one of the targets below and uncomment it.

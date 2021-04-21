@@ -2,7 +2,7 @@
 *.d
 
 # Compiled Object files
-*.obj
+*.*obj
 
 # Precompiled Headers
 *.gch
@@ -11,20 +11,25 @@
 # Compiled Static libraries
 *.lib
 *.exp
+*.*db
 
 # Temporary and hidden
 *./
 .*
 _*
+*.bak*
+*.old*
 
 # Tools
 *.bat
 *.cmd
 *.vbs
+*.*_*
 
 
 # Explicitly included
 !.git*
-!.md
 !*.dll
 !*.msi
+!.md*
+!.sha*

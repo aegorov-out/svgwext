@@ -36,7 +36,8 @@
 #define WCXSTDAPI			WCXAPI __stdcall
 #define WCXFASTAPI_(type)	WCXAPI_(type) __fastcall
 #define WCXFASTAPI			WCXAPI __fastcall
-#define WCXCDECLAPI_(type)	WCXAPI_(type) __cdecl
+#define WCXCAPI_(type)		WCXAPI_(type) __cdecl
+#define WCXCAPI				WCXCAPI_(HRESULT)
 
 
 EXTERN_C HMODULE g_hModule;
@@ -154,7 +155,7 @@ INLINE UINT wcInt32ToDec(INT32 iVal, _Out_writes_to_(cchMax, return-1) PWSTR szN
 WCXFASTAPI_(UINT) wcAsciiToWide(_In_opt_ PCSTR szAscii, int cchBuff, _Out_writes_to_(cchBuff, return + 1) PWSTR pwcBuff);
 
 WCXFASTAPI_(bool_t) wcAsciiIsEqual(_In_opt_ PCWSTR szWide, _In_opt_ PCSTR szAscii);
-WCXCDECLAPI_(bool_t) wcAsciiIsEqualV(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...);
+WCXCAPI_(bool_t) wcAsciiIsAnyEqual(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...);
 
 WCXFASTAPI_(PDWORD32) wcSetMemory32(_Out_writes_all_(cdw) PDWORD32 dest, _In_ DWORD32 val, _In_ SIZE_T cdw);
 
@@ -166,6 +167,11 @@ INLINE SIZE wcScaleSizeL(_In_ SIZE size, _In_opt_ UINT maxSide)
 }
 
 WCXFASTAPI_(UINT32) wcPackStdExtension4(_In_reads_(cch) PCWCH pwcExt, const UINT cch);
+
+WCXFASTAPI_(BOOL) wcSwitchThread(_In_opt_ UINT msSleep DEFARG_(USER_TIMER_MINIMUM));
+
+_Success_(return == S_OK) WCXSTDAPI
+wcUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -279,10 +285,9 @@ INLINE HRESULT wcGetSvgRootDesc(_In_ ID2D1SvgElement* proot, _Outptr_result_null
 
 WCXFASTAPI_(PWSTR) wcFindFileName(_In_NLS_string_opt_(pathLen) PCWCH pathName, int pathLen DEFARG_(-1));
 
-_Success_(return != 0) _Ret_range_(1, cchMax-1)
+_Success_(return > 0)
 WCXSTDAPI_(UINT) wcGetModuleName(_In_opt_ HMODULE hModule,
 	_Out_writes_to_(cchMax, return+1) PWSTR szFileName, UINT cchMax);
-
 
 _Check_return_ _Success_(return == S_OK)
 WCXFASTAPI wcCreateStreamOnFile(_In_opt_ PCWSTR szFileName, BOOL write, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
@@ -333,13 +338,38 @@ WCXSTDAPI_(UINT) wsFormatVersion(_In_ UINT64 ver64, _Out_writes_to_(cchMax, retu
 
 
 ///////////////////////////////////////////////////////////////////////
-// Misc. //////////////////////////////////////////////////////////////
+// Logging ////////////////////////////////////////////////////////////
 
 
-WCXFASTAPI_(BOOL) wcSwitchThread(_In_opt_ UINT msSleep DEFARG_(USER_TIMER_MINIMUM));
+#ifdef WCX_ENABLE_LOG
 
-_Success_(return == S_OK) WCXSTDAPI
-wcUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
+WCXFASTAPI wcLogOpen(_In_opt_ PCWSTR szFileName);
+
+WCXFASTAPI wcLogWrite(_In_opt_ PCSTR szText);
+WCXFASTAPI wcLogWriteW(_In_opt_ PCWSTR szText);
+WCXFASTAPI wcLogWriteLn(_In_opt_ PCSTR szText);
+WCXFASTAPI wcLogWriteLnW(_In_opt_ PCWSTR szText);
+WCXCAPI wcLogFormat(_In_opt_ PCSTR szFmt, ...);
+WCXFASTAPI wcLogFormatV(_In_opt_ PCSTR szFmt, va_list Args);
+WCXCAPI wcLogFormatLn(_In_opt_ PCSTR szFmt, ...);
+WCXFASTAPI wcLogFormatLnV(_In_opt_ PCSTR szFmt, va_list Args);
+WCXCAPI wcLogFormatStat(_In_opt_ IStream* pstm, _In_opt_ PCSTR szFmt, ...);
+
+#else	// WCX_ENABLE_LOG
+
+CONSTEXPR HRESULT wcLogOpen(_In_opt_ PCWSTR szFileName) { return E_NOTIMPL; }
+
+CONSTEXPR HRESULT wcLogWrite(_In_opt_ PCSTR szText) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogWriteW(_In_opt_ PCWSTR szText) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogWriteLn(_In_opt_ PCSTR szText) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogWriteLnW(_In_opt_ PCWSTR szText) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogFormat(_In_opt_ PCSTR szFmt, ...) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogFormatV(_In_opt_ PCSTR szFmt, va_list Args) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogFormatLn(_In_opt_ PCSTR szFmt, ...) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogFormatLnV(_In_opt_ PCSTR szFmt, va_list Args) { return E_NOTIMPL; }
+CONSTEXPR HRESULT wcLogFormatStat(_In_opt_ IStream* pstm, _In_opt_ PCSTR szFmt, ...) { return E_NOTIMPL; }
+
+#endif	// WCX_ENABLE_LOG
 
 
 ///////////////////////////////////////////////////////////////////////

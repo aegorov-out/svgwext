@@ -190,7 +190,7 @@ _Check_return_ WCXFASTAPI_(LONG) wcIsDXRecreateError(HRESULT hr)
 // Storage & Files ////////////////////////////////////////////////////
 
 
-_Success_(return != 0) _Ret_range_(1, cchMax-1)
+_Success_(return > 0)
 WCXSTDAPI_(UINT) wcGetModuleName(_In_opt_ HMODULE hModule,
 		_Out_writes_to_(cchMax, return+1) PWSTR szFileName, UINT cchMax)
 {

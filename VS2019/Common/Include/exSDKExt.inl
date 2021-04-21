@@ -430,7 +430,7 @@ __inline void CopyGUID(GUID* dest, const GUID* src)
 #ifdef IsEqualCLSID
 #undef IsEqualCLSID
 #endif
-#define IsEqualCLSID(clsid1, clsid2)	CPP_GLOBAL(InlineIsEqualGUID(clsidd1, clsid2))
+#define IsEqualCLSID(clsid1, clsid2)	CPP_GLOBAL(InlineIsEqualGUID(clsid1, clsid2))
 
 #define CopyGuid(dst, src)	CopyGUID(dst, src)
 

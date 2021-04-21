@@ -40,7 +40,7 @@
     <ClCompile Include="WMFDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="_Test.cpp">
+    <ClCompile Include="Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BaseDecoder.cpp">

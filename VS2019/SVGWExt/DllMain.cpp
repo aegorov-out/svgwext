@@ -48,17 +48,21 @@ extern "C" BOOL WINAPI DllMain(_In_ HINSTANCE hinstDll, DWORD fdwReason, LPVOID 
 	if (DLL_PROCESS_ATTACH == fdwReason)
 	{
 		g_hModule = hinstDll;
-#ifndef _DEBUG
+	#ifndef _DEBUG
 		DisableThreadLibraryCalls(hinstDll);
-#endif
+	#endif
 		DEBUG_INITIALIZE;
-#ifndef _WIN64
+	#ifndef _WIN64
 		BOOL bVal = FALSE;
 		if (::IsWow64Process(GetCurrentProcess(), &bVal))
 			g_initFlags |= INITINF_WOW64;
-#endif
+	#endif
 		wcInitCommonCS(&g_CS);
 		g_initFlags |= INITF_CSINIT;
+	#if defined(WCX_ENABLE_LOG) && !defined(_DEBUG)
+		if (!staticLoad)
+			wcLogCreate();
+	#endif
 	}
 	else if (DLL_PROCESS_DETACH == fdwReason)
 	{
@@ -70,6 +74,9 @@ extern "C" BOOL WINAPI DllMain(_In_ HINSTANCE hinstDll, DWORD fdwReason, LPVOID 
 			g_initFlags &= ~INITF_CSINIT;
 			DeleteCriticalSection(&g_CS);
 		}
+	#ifdef WCX_ENABLE_LOG
+		wcLogClose();
+	#endif
 	}
 	return TRUE;
 }
@@ -96,20 +103,20 @@ namespace RootNamespace {	// ++++++++++++++++++++++++++++++++++++++++
 
 static NOINLINE HRESULT VerifyWinVersion()
 {
-	if (!(g_initFlags & INITINF_WINVER_OK))
+	if (g_initFlags & INITINF_WINVER_OK)
+		return S_OK;
+
+	OSVERSIONINFOEXW vi;
+	vi.dwOSVersionInfoSize = sizeof(vi);
+	vi.dwMajorVersion = 10;
+	vi.dwMinorVersion = 0;
+	vi.dwBuildNumber = 15063;
+	if (::VerifyVersionInfoW(&vi, VER_MAJORVERSION|VER_BUILDNUMBER,
+		::VerSetConditionMask(::VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL),
+			VER_BUILDNUMBER, VER_GREATER_EQUAL)))
 	{
-		OSVERSIONINFOEXW vi;
-		vi.dwOSVersionInfoSize = sizeof(vi);
-		vi.dwMajorVersion = 10;
-		vi.dwMinorVersion = 0;
-		vi.dwBuildNumber = 15063;
-		if (::VerifyVersionInfoW(&vi, VER_MAJORVERSION|VER_BUILDNUMBER,
-			::VerSetConditionMask(::VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL),
-				VER_BUILDNUMBER, VER_GREATER_EQUAL)))
-		{
-			g_initFlags |= INITINF_WINVER_OK;
-			return S_OK;
-		}
+		g_initFlags |= INITINF_WINVER_OK;
+		return S_OK;
 	}
 	return __HRESULT_FROM_WIN32(ERROR_OLD_WIN_VERSION);
 }

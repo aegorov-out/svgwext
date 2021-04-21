@@ -13,7 +13,8 @@ namespace RootNamespace {
 ///////////////////////////////////////////////////////////////////////
 
 
-class NOVTABLE ThumbProviderBase abstract : public IThumbnailProvider, public IPropertyStore,
+class NOVTABLE ThumbProviderBase abstract : public IThumbnailProvider,
+		public IPropertyStore, public IObjectWithSite,
 		public IInitializeWithStream, public IInitializeWithItem, public IInitializeWithFile
 {
 	IMPL_UNCOPYABLE(ThumbProviderBase)
@@ -39,6 +40,8 @@ protected:
 		ID2D1SvgDocument* m_svgDoc;
 		ID2D1GdiMetafile* m_metafile;
 	};
+	IUnknown* m_site;
+
 
 	ThumbProviderBase(_In_reads_(cProps) PCPropHandler rgProps, UINT cProps, _In_ ULONG cRef)
 			: m_cRef(cRef), m_cProps(cProps), m_rgProps(rgProps) { DllAddRef(); }
@@ -79,6 +82,9 @@ public:
 	HRESULT STDMETHODCALLTYPE GetValue(__RPC__in REFPROPERTYKEY key, __RPC__out PROPVARIANT* pv) override;
 	HRESULT STDMETHODCALLTYPE SetValue(__RPC__in REFPROPERTYKEY key, __RPC__in REFPROPVARIANT propvar) override;
 	HRESULT STDMETHODCALLTYPE Commit();
+
+	HRESULT STDMETHODCALLTYPE GetSite(REFIID riid, void** ppvSite) override;
+    HRESULT STDMETHODCALLTYPE SetSite(IUnknown* pUnkSite) override;
 };
 
 
@@ -103,6 +109,8 @@ inline PROPERTYKEY* ClearPROPERTYKEY(PROPERTYKEY* ppk)
 
 void ThumbProviderBase::Release_() 
 {
+	if (m_site)
+		m_site->Release();
 	if (m_unkData)
 		m_unkData->Release();
 	if (m_d2dDC)
@@ -122,9 +130,9 @@ void ThumbProviderBase::Clear()
 WARNING_SUPPRESS(6101 6388 28196)
 HRESULT ThumbProviderBase::QueryInterface(REFIID riid, _COM_Outptr_ void** ppvObject)
 {
-	const HRESULT hr = QueryInterfaceImpl_(riid, ppvObject, 5, QI_ARG(IThumbnailProvider, this),
+	const HRESULT hr = QueryInterfaceImpl_(riid, ppvObject, 6, QI_ARG(IThumbnailProvider, this),
 			QI_ARG(IInitializeWithStream, this), QI_ARG(IInitializeWithItem, this),
-			QI_ARG(IInitializeWithFile, this), QI_ARG(IPropertyStore, this));
+			QI_ARG(IInitializeWithFile, this), QI_ARG(IPropertyStore, this), QI_ARG(IObjectWithSite, this));
 	if (S_OK == hr)
 		_InterlockedIncrement(&m_cRef);
 	return hr;
@@ -348,6 +356,30 @@ HRESULT ThumbProviderBase::Commit()
 }
 
 
+// IObjectWithSite ////////////////////////////////////////////////////
+
+
+HRESULT ThumbProviderBase::GetSite(REFIID riid, void** ppvSite)
+{
+	if (m_site)
+		return m_site->QueryInterface(riid, ppvSite);
+	if (ppvSite)
+		*ppvSite = nullptr;
+	return E_FAIL;
+}
+
+HRESULT ThumbProviderBase::SetSite(IUnknown* pUnkSite)
+{
+	SafeRelease(&m_site);
+	if (pUnkSite)
+	{
+		m_site = pUnkSite;
+		pUnkSite->AddRef();
+	}
+	return S_OK;
+}
+
+
 ///////////////////////////////////////////////////////////////////////
 // SVG thumbnail provider /////////////////////////////////////////////
 
@@ -557,27 +589,33 @@ HRESULT __fastcall CreateXThumbProvider(_In_ REFIID riid, _COM_Outptr_result_nul
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
-	else if (IsEqualGUID(riid, IID_IInitializeWithStream))
+	else if (IsEqualIID(riid, IID_IInitializeWithStream))
 	{
 		if (*ppvObject = static_cast<IInitializeWithStream*>(new TP(1)))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
-	else if (IsEqualGUID(riid, IID_IInitializeWithItem))
+	else if (IsEqualIID(riid, IID_IInitializeWithItem))
 	{
 		if (*ppvObject = static_cast<IInitializeWithItem*>(new TP(1)))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
-	else if (IsEqualGUID(riid, IID_IInitializeWithFile))
+	else if (IsEqualIID(riid, IID_IInitializeWithFile))
 	{
 		if (*ppvObject = static_cast<IInitializeWithFile*>(new TP(1)))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
-	else if (IsEqualGUID(riid, IID_IPropertyStore))
+	else if (IsEqualIID(riid, IID_IPropertyStore))
 	{
 		if (*ppvObject = static_cast<IPropertyStore*>(new TP(1)))
+			return S_OK;
+		hr = E_OUTOFMEMORY;
+	}
+	else if (IsEqualIID(riid, IID_IObjectWithSite))
+	{
+		if (*ppvObject = static_cast<IObjectWithSite*>(new TP(1)))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}

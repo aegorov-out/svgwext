@@ -11,7 +11,7 @@
 	<String Id="Win1703Required">[ProductName] requires Windows 10 Creators Update (1703) or newer.</String>
 
 	<String Id="MainProgram">Main program files</String>
-	<String Id="MainProgramDescr">Main program files and Windows Imaging Component (WIC) SVG/WMF/EMF decoders.</String>
+	<String Id="MainProgramDescr">Main program files and SVG/WMF/EMF WIC decoders.</String>
 	<String Id="SVGDecoder">SVG decoder</String>
 	<String Id="WMFDecoder">WMF/EMF decoder</String>
 	<String Id="SVGThumbs">SVG thumbnail provider</String>

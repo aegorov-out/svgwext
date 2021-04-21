@@ -4,12 +4,12 @@ Windows Imaging Component (WIC) SVG/WMF/EMF decoders and File Explorer thumbnail
 The extension uses [Direct2D](https://docs.microsoft.com/en-us/windows/win32/direct2d/) to render SVG and WMF/EMF graphics.
 
 ## System Requirements
-Windows 10 Creators Update (1703, build 15063) or newer is required. No additional libraries or frameworks are used.
+Works on Windows 10 Creators Update (1703, build 15063) or newer verion. No additional libraries or frameworks are used.
 #### Build Environment
-Microsoft Visual Studio Community 2019
+Microsoft Visual Studio Community 2019 (WiX Toolset Extension to build MSI packages)
 
 ## Installation
-The extension module architecture must match the architecture of your system. Download [**64-bit** package (English)](Release/x64/en-us/svgwext2021_x64_en-us.msi) for **64-bit** Windows, or [**32-bit** package (English)](Release/x86/en-us/svgwext2021_x86_en-us.msi) for **32-bit** Windows.  
+The extension module architecture must match the architecture of your system. [Download](Release) [**64-bit** package (English)](../../raw/main/Release/x64/en-us/svgwext2021_x64_en.msi) for **64-bit** Windows, or [**32-bit** package (English)](../../raw/main/Release/x86/en-us/svgwext2021_x86_en.msi) for **32-bit** Windows.  
 Then just install the downloaded .MSI package.
 
 If you prefer to build the source code by yourself and/or use DLL self-registration, the corresponding routines (`DllRegisterServer`, `DllUnregisterServer`, `DllInstall`) are available.
@@ -17,12 +17,16 @@ If you prefer to build the source code by yourself and/or use DLL self-registrat
 ## Downloads
 [Choose](Release) an appropriate package or use these direct links:
 
-- [**64-bit** .msi package (English)](../../raw/main/Release/x64/en-us/svgwext2021_x64_en-us.msi)
-- [**64-bit** .msi package (Russian)](../../raw/main/Release/x64/ru-ru/svgwext2021_x64_ru-ru.msi)
-- [**32-bit** .msi package (English)](../../raw/main/Release/x86/en-us/svgwext2021_x86_en-us.msi)
-- [**32-bit** .msi package (Russian)](../../raw/main/Release/x86/ru-ru/svgwext2021_x86_ru-ru.msi)
+- [**64-bit** .msi package&nbsp;(English)](../../raw/main/Release/x64/en-us/svgwext2021_x64_en.msi) |
+ [MD5](../../raw/main/Release/x64/en-us/svgwext2021_x64_en.msi.md5) | [SHA1](../../raw/main/Release/x64/en-us/svgwext2021_x64_en.msi.sha1)
+- [**64-bit** .msi package (Russian)](../../raw/main/Release/x64/ru-ru/svgwext2021_x64_ru.msi) |
+ [MD5](../../raw/main/Release/x64/en-us/svgwext2021_x64_ru.msi.md5) | [SHA1](../../raw/main/Release/x64/en-us/svgwext2021_x64_ru.msi.sha1)
+- [**32-bit** .msi package (English)](../../raw/main/Release/x86/en-us/svgwext2021_x86_en.msi) |
+ [MD5](../../raw/main/Release/x64/en-us/svgwext2021_x86_en.msi.md5) | [SHA1](../../raw/main/Release/x64/en-us/svgwext2021_x86_en.msi.sha1)
+- [**32-bit** .msi package (Russian)](../../raw/main/Release/x86/ru-ru/svgwext2021_x86_ru.msi) |
+ [MD5](../../raw/main/Release/x64/en-us/svgwext2021_x86_ru.msi.md5) | [SHA1](../../raw/main/Release/x64/en-us/svgwext2021_x86_ru.msi.sha1)
 
-\* Note that the binaries are language-neutral, only installation package UI is translated.  
+\* All the binaries are language-neutral, only installation package UI is translated.  
 
 __________
 ## License

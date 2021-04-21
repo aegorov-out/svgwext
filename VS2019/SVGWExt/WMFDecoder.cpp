@@ -17,6 +17,9 @@ _Success_(return == S_OK) NOALIAS
 HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
 		_COM_Outptr_result_nullonfailure_ ID2D1GdiMetafile** ppMetafile, _Out_ D2D_POINT_2F* pOrigin, _Out_ D2D_SIZE_F* pSize)
 {
+	/*CHAR _steps[256];
+	_steps[0] = 0;*/
+
 	IStream* pstmInf;
 	HRESULT hr = wcUncompressStream(pstm, FALSE, &pstmInf);
 	if (S_OK == hr)
@@ -26,9 +29,11 @@ HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 	else
 		goto Error_;
 
+	//strcpy(_steps, ">Begin");
 	hr = CreateD2DC(ppDC);
 	if (S_OK == hr)
 	{
+		//strcat(_steps, " CreateD2DC");
 		union {
 			ID2D1Factory6* d2dFactory;
 			D2D_RECT_F rcBounds;
@@ -36,13 +41,16 @@ HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 		hr = GetD2DFactory(&d2dFactory);
 		if (S_OK == hr)
 		{
+			//strcat(_steps, " GetD2DFactory");
 			hr = d2dFactory->CreateGdiMetafile(pstm, ppMetafile);
 			d2dFactory->Release();
 			if (S_OK == hr)
 			{
+				//strcat(_steps, " CreateGdiMetafile");
 				hr = (*ppMetafile)->GetBounds(&rcBounds);
 				if (S_OK == hr)
 				{
+					//strcat(_steps, " GetBounds");
 					pSize->width = rcBounds.right - rcBounds.left;
 					pSize->height = rcBounds.bottom - rcBounds.top;
 					if (AllTrue(IsZero(rcBounds.left), IsZero(rcBounds.top)))
@@ -51,6 +59,7 @@ HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 						Copy8Bytes(pOrigin, &rcBounds);
 					if (AllTrue(pSize->width > 0, pSize->height > 0))
 					{
+						//strcat(_steps, " OK!");
 						pstm->Release();
 						return S_OK;
 					}
@@ -64,6 +73,8 @@ HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1D
 	pstm->Release();
 
 Error_:
+	//wcLogWriteLn("WMF/EMF load error");
+	//wcLogFormatStat(pstm, ": 0x%.8X (%s)\r\n", hr, _steps);
 	Zero8Bytes(pSize);
 	*ppMetafile = nullptr;
 	*ppDC = nullptr;

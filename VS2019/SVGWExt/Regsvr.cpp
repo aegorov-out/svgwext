@@ -119,17 +119,17 @@ static NOALIAS UINT8 __fastcall ReadCompArg(_In_opt_ PCWSTR szArg)
 		const PCWSTR szSwitch = wcCheckCLSwitch(szArg);
 		if (szSwitch)
 			szArg = szSwitch;
-		if (wcAsciiIsEqualV(szArg, 2, "svg", "svgall"))
+		if (wcAsciiIsAnyEqual(szArg, 2, "svg", "svgall"))
 			comp = (UINT8)ServComp::SvgThumbProvider | (UINT8)ServComp::SvgDecoder;
-		else if (wcAsciiIsEqualV(szArg, 2, "svgt", "svgthumb"))
+		else if (wcAsciiIsAnyEqual(szArg, 2, "svgt", "svgthumb"))
 			comp = (UINT8)ServComp::SvgThumbProvider;
-		else if (wcAsciiIsEqualV(szArg, 3, "svgd", "svgdec", "svgwic"))
+		else if (wcAsciiIsAnyEqual(szArg, 3, "svgd", "svgdec", "svgwic"))
 			comp = (UINT8)ServComp::SvgDecoder;
-		else if (wcAsciiIsEqualV(szArg, 3, "wmf", "wmfemf", "wmfall"))
+		else if (wcAsciiIsAnyEqual(szArg, 3, "wmf", "wmfemf", "wmfall"))
 			comp = (UINT8)ServComp::WmfThumbProvider | (UINT8)ServComp::WmfDecoder;
-		else if (wcAsciiIsEqualV(szArg, 2, "wmft", "wmfthumb"))
+		else if (wcAsciiIsAnyEqual(szArg, 2, "wmft", "wmfthumb"))
 			comp = (UINT8)ServComp::WmfThumbProvider;
-		else if (wcAsciiIsEqualV(szArg, 3, "wmfd", "wmfdec", "wmfwic"))
+		else if (wcAsciiIsAnyEqual(szArg, 3, "wmfd", "wmfdec", "wmfwic"))
 			comp = (UINT8)ServComp::WmfDecoder;
 		else
 			ASSUME(0 == comp);
@@ -1053,7 +1053,7 @@ STDAPI RunDllInstall(_In_opt_ HWND hWnd, UINT idMsg, _In_opt_ PCSTR szCmdLine, L
 			if (cArgs > 0)
 			{
 				const PCWSTR szSwitch = wcCheckCLSwitch(rgszArgs[0]);
-				if (szSwitch && wcAsciiIsEqualV(szSwitch, 3, "u", "x", "uninstall"))
+				if (szSwitch && wcAsciiIsAnyEqual(szSwitch, 3, "u", "x", "uninstall"))
 				{
 					rgszArgs++;
 					cArgs--;
