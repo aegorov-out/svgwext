@@ -26,6 +26,9 @@ _*
 *.vbs
 *.*_*
 
+# Misc.
+*.ini
+
 
 # Explicitly included
 !.git*
