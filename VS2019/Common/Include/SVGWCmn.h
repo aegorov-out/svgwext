@@ -53,9 +53,9 @@ EXTERN_C HMODULE g_hModule;
 #define D2D_VERSION_MINOR	3
 
 
-#define SVG_WIC_EXTENSIONS	L".svg,.svgz"
-#define SVG_MIME_TYPE		L"image/svg+xml"
-#define SVG_WIC_MIME_TYPES	SVG_MIME_TYPE
+#define SVG_WIC_EXTENSIONS		L".svg,.svgz"
+#define SVG_MIME_TYPE			L"image/svg+xml"
+#define SVG_WIC_MIME_TYPES		SVG_MIME_TYPE
 
 #define WMFEMF_WIC_EXTENSIONS	L".emf,.wmf,.emz,.wmz"
 #define WMF_MIME_TYPE			L"image/x-wmf"
@@ -116,13 +116,16 @@ using namespace RootNamespace;
 
 WCXSTDAPI wcDllInstall(BOOL bInstall, _In_reads_opt_(cArgs) const PCWSTR* rgszArgs, int cArgs);
 
-#ifdef _DEBUG
+#ifdef WCX_INCLUDE_TESTS
+
 enum CPP_ONLY(: UINT) {
-	DLLT_NULL = 0, DLLT_THUMB_HBITMAP, DLLT_THUMB_WICSOURCE, DLLT_DECODER_WICFRAME, DLLT_DECODER_WICTRANSFORM, DLLT_WICDECODER,
-	DLLT_UNGZIP_STREAM, DLLT_UNGZIP_FILE
+	DLLT_NULL = 0, LLT_NONE = DLLT_NULL, DLLT_THUMB_HBITMAP, DLLT_THUMB_WICSOURCE,
+	DLLT_DECODER_WICFRAME, DLLT_DECODER_WICTRANSFORM, DLLT_WICDECODER,
+	DLLT_PROPERTY_STORE, DLLT_UNGZIP_STREAM, DLLT_UNGZIP_FILE
 };
 WCXSTDAPI wcRunDllTest(_In_opt_ HWND hWnd, UINT idMsg, _In_opt_ PCWSTR szCmdLine, LPARAM lParam DEFARG_(0));
-#endif
+
+#endif	// WCX_INCLUDE_TESTS
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -152,10 +155,12 @@ INLINE UINT wcInt32ToDec(INT32 iVal, _Out_writes_to_(cchMax, return-1) PWSTR szN
 	return wcNum32ToStr(iVal, true, szNum, cchMax, 10);
 }
 
-WCXFASTAPI_(UINT) wcAsciiToWide(_In_opt_ PCSTR szAscii, int cchBuff, _Out_writes_to_(cchBuff, return + 1) PWSTR pwcBuff);
+WCXFASTAPI_(UINT) wcAsciiToWide(_In_opt_ PCSTR szAscii, _Out_writes_to_(cchBuff, return + 1) PWSTR pwcBuff, int cchBuff);
 
 WCXFASTAPI_(bool_t) wcAsciiIsEqual(_In_opt_ PCWSTR szWide, _In_opt_ PCSTR szAscii);
 WCXCAPI_(bool_t) wcAsciiIsAnyEqual(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...);
+WCXFASTAPI_(int) wcCompareString(_In_NLS_string_opt_(cwch) PCWCH pwc1,
+		_In_NLS_string_opt_(cwch) PCWCH pwc2, int cwch DEFARG_(-1));
 
 WCXFASTAPI_(PDWORD32) wcSetMemory32(_Out_writes_all_(cdw) PDWORD32 dest, _In_ DWORD32 val, _In_ SIZE_T cdw);
 
@@ -171,7 +176,7 @@ WCXFASTAPI_(UINT32) wcPackStdExtension4(_In_reads_(cch) PCWCH pwcExt, const UINT
 WCXFASTAPI_(BOOL) wcSwitchThread(_In_opt_ UINT msSleep DEFARG_(USER_TIMER_MINIMUM));
 
 _Success_(return == S_OK) WCXSTDAPI
-wcUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
+wcTryUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -292,15 +297,16 @@ WCXSTDAPI_(UINT) wcGetModuleName(_In_opt_ HMODULE hModule,
 _Check_return_ _Success_(return == S_OK)
 WCXFASTAPI wcCreateStreamOnFile(_In_opt_ PCWSTR szFileName, BOOL write, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
 
-_Success_(return == S_OK)
+_Check_return_ _Success_(return == S_OK)
 WCXSTDAPI wcCreateStreamOnItem(_In_ IShellItem* psi, BOOL write, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
 
-/*
+_Check_return_ _Success_(return == S_OK)
+WCXFASTAPI wcCreateTempFileStream(_In_opt_ SIZE_T cbInitSize, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
 _Check_return_ _Success_(return == S_OK)
 WCXFASTAPI wcCreateTempStream(_In_opt_ SIZE_T cbInitSize, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
 _Check_return_ _Success_(return == S_OK)
-WCXFASTAPI wcCreateStreamBuffer(_In_opt_ SIZE_T cbSize, _COM_Outptr_result_nullonfailure_ IStream** ppstm);
-*/
+WCXFASTAPI wcCopyTempStream(_In_ IStream* pstmIn, _In_opt_ UINT64 cbCopy, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
+
 
 ///////////////////////////////////////////////////////////////////////
 // Resources //////////////////////////////////////////////////////////

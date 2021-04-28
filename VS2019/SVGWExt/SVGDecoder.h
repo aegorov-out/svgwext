@@ -17,8 +17,9 @@ class SvgDecoder : public DecoderBase
 	ID2D1SvgDocument* m_svgDoc;
 
 	bool IsInit() const override { return AllTrue(m_d2dDC, m_svgDoc); }
-	bool IsClear() const { return AllTrue(!m_d2dDC, !m_svgDoc); }
+	bool IsClear() const override { return AllTrue(!m_d2dDC, !m_svgDoc); }
 
+	HRESULT __fastcall InitLoad(_In_ IStream* pstm) override;
 	HRESULT QueryCopyPixelTransform_(D2D_SIZE_U targSize, WICBitmapTransformOptions wicTransform,
 		UINT angleRotated, _Inout_ D2D_MATRIX_3X2_F* pMatrix) const override;
 	_Success_(return == S_OK) HRESULT CreateCpuReadBitmap_(D2D_SIZE_F drawSize, D2D_SIZE_U targSize,
@@ -29,13 +30,11 @@ class SvgDecoder : public DecoderBase
 public:
 	SvgDecoder() : DecoderBase(1) {}
 	virtual ~SvgDecoder() { if (m_svgDoc) m_svgDoc->Release(); }
-	void ZeroInit() { ZeroStructFrom(this, m_cRef); }
 
 	_Success_(return == S_OK) HRESULT CreateCpuReadBitmapWT(D2D_SIZE_U targSize,
 		WICBitmapTransformOptions transform, _COM_Outptr_ ID2D1Bitmap1** ppbmMap);
 
 	HRESULT STDMETHODCALLTYPE QueryCapability(__RPC__in_opt IStream* pIStream, __RPC__out DWORD* pdwCapability) override;
-	HRESULT STDMETHODCALLTYPE Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions cacheOptions) override;
 	HRESULT STDMETHODCALLTYPE GetContainerFormat(__RPC__out GUID* pguidContainerFormat) override;
 	HRESULT STDMETHODCALLTYPE GetDecoderInfo(__RPC__deref_out_opt IWICBitmapDecoderInfo** ppIDecoderInfo) override;
 

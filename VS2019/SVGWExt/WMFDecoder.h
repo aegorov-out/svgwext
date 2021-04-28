@@ -14,12 +14,13 @@ namespace RootNamespace {
 
 class WmfDecoder : public DecoderBase
 {
-	ID2D1GdiMetafile* m_metafile;
+	ID2D1GdiMetafile1* m_metafile;
 	D2D_POINT_2F m_ptOrigin;
 
 	bool IsInit() const override { return AllTrue(m_d2dDC, m_metafile); }
-	bool IsClear() const { return AllTrue(!m_d2dDC, !m_metafile); }
+	bool IsClear() const override { return AllTrue(!m_d2dDC, !m_metafile); }
 
+	HRESULT __fastcall InitLoad(_In_ IStream* pstm) override;
 	HRESULT QueryCopyPixelTransform_(D2D_SIZE_U targSize, WICBitmapTransformOptions wicTransform,
 		UINT angleRotated, _Inout_ D2D_MATRIX_3X2_F* pMatrix) const override;
 	_Success_(return == S_OK) HRESULT CreateCpuReadBitmap_(D2D_SIZE_F drawSize, D2D_SIZE_U targSize,
@@ -30,13 +31,11 @@ class WmfDecoder : public DecoderBase
 public:
 	WmfDecoder() : DecoderBase(1) {}
 	virtual ~WmfDecoder() { if (m_metafile) m_metafile->Release(); }
-	void ZeroInit() { ZeroStructFrom(this, m_cRef); }
 
 	_Success_(return == S_OK) HRESULT CreateCpuReadBitmapWT(D2D_SIZE_U targSize, bool scale,
 		WICBitmapTransformOptions transform, _COM_Outptr_ ID2D1Bitmap1** ppbmMap);
 
 	HRESULT STDMETHODCALLTYPE QueryCapability(__RPC__in_opt IStream* pIStream, __RPC__out DWORD* pdwCapability) override;
-	HRESULT STDMETHODCALLTYPE Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions cacheOptions) override;
 	HRESULT STDMETHODCALLTYPE GetContainerFormat(__RPC__out GUID* pguidContainerFormat) override;
 	HRESULT STDMETHODCALLTYPE GetDecoderInfo(__RPC__deref_out_opt IWICBitmapDecoderInfo** ppIDecoderInfo) override;
 

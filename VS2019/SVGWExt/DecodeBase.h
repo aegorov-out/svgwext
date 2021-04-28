@@ -26,6 +26,7 @@ protected:
 	ID2D1DeviceContext5* m_d2dDC;
 	D2D_SIZE_F m_sizeDips;
 	IWICBitmap* m_wicBitmap;
+	IStream* m_pstmInit;
 	mutable CRITICAL_SECTION m_CS;
 
 protected:
@@ -36,6 +37,8 @@ protected:
 			m_wicBitmap->Release();
 		if (m_d2dDC)
 			m_d2dDC->Release();
+		if (m_pstmInit)
+			m_pstmInit->Release();
 		::DeleteCriticalSection(&m_CS);
 		DllRelease();
 	}
@@ -57,7 +60,10 @@ protected:
 		_In_ const D2D1_MATRIX_3X2_F& transform, _COM_Outptr_ ID2D1Bitmap1** ppbmMap);
 	_Success_(return == S_OK) HRESULT CreateThumbnail(D2D_SIZE_F size, _In_ const D2D1_MATRIX_3X2_F& transform,
 		__RPC__deref_out_opt IWICBitmapSource** ppIThumbnail);
+	HRESULT __fastcall DoLoad(_In_ IStream* pstm);
+	HRESULT Reload(HRESULT hrRecreate);
 
+	virtual HRESULT __fastcall InitLoad(_In_ IStream* pstm) = 0;
 	virtual HRESULT QueryCopyPixelTransform_(D2D_SIZE_U reqSize, WICBitmapTransformOptions wicTransform,
 		UINT angleRotated, _Inout_ D2D_MATRIX_3X2_F* pMatrix) const = 0;
 	_Success_(return == S_OK)
@@ -65,13 +71,14 @@ protected:
 		_In_ const D2D1_MATRIX_3X2_F& transform, _COM_Outptr_ ID2D1Bitmap1** ppbmMap) const = 0;
 	_Success_(return == S_OK)
 	virtual bool IsInit() const = 0;
+	virtual bool IsClear() const= 0;
 	virtual void Clear();
-	virtual HRESULT Reload(HRESULT hrRecreate);
 
 public:
 	DECLARE_IUNKNOWN;
 
 	// IWICBitmapDecoder
+	HRESULT STDMETHODCALLTYPE Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions cacheOptions) override;
 	HRESULT STDMETHODCALLTYPE CopyPalette(__RPC__in_opt IWICPalette* pIPalette) override;
 	HRESULT STDMETHODCALLTYPE GetMetadataQueryReader(__RPC__deref_out_opt IWICMetadataQueryReader** ppIMetadataQueryReader) override;
 	HRESULT STDMETHODCALLTYPE GetPreview(__RPC__deref_out_opt IWICBitmapSource** ppIBitmapSource) override;

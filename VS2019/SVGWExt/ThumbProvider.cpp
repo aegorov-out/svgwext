@@ -2,25 +2,25 @@
 
 #include "pch.h"
 #include "DecodeBase.h"
-#include <propkey.h>
 
 #pragma warning(disable: 6387 6388 26495 28196)
+
 
 namespace RootNamespace {
 
 ///////////////////////////////////////////////////////////////////////
 // Base thumbnail provider ////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
 
 
 class NOVTABLE ThumbProviderBase abstract : public IThumbnailProvider,
-		public IPropertyStore, public IObjectWithSite,
+		public IPropertyStore, public IPropertyStoreCapabilities,
 		public IInitializeWithStream, public IInitializeWithItem, public IInitializeWithFile
 {
 	IMPL_UNCOPYABLE(ThumbProviderBase)
 
 protected:
-	static constexpr auto COMMON_PROP_COUNT = 3u;	// PKEY_Image_Dimensions, PKEY_Image_HorizontalSize, PKEY_Image_VerticalSize
+	// PKEY_Kind, PKEY_Image_Dimensions, PKEY_Image_HorizontalSize, PKEY_Image_VerticalSize, PKEY_Image_BitDepth
+	static constexpr auto COMMON_PROP_COUNT = 5u;
 	static constexpr HRESULT E_UNKNOWN_PROPERTY = __HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY);
 
 	typedef HRESULT(__fastcall* PROPHANDLERPROC)(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
@@ -38,12 +38,12 @@ protected:
 	union {
 		IUnknown* m_unkData;
 		ID2D1SvgDocument* m_svgDoc;
-		ID2D1GdiMetafile* m_metafile;
+		ID2D1GdiMetafile1* m_metafile;
 	};
-	IUnknown* m_site;
+	IStream* m_pstmInit;
 
 
-	ThumbProviderBase(_In_reads_(cProps) PCPropHandler rgProps, UINT cProps, _In_ ULONG cRef)
+	ThumbProviderBase(_In_reads_(cProps) PCPropHandler rgProps, UINT cProps, _In_ ULONG cRef = 1)
 			: m_cRef(cRef), m_cProps(cProps), m_rgProps(rgProps) { DllAddRef(); }
 	bool IsInit() const { return AllTrue(m_d2dDC, m_unkData); }
 
@@ -59,9 +59,11 @@ protected:
 
 	static const PropHandler s_rgPropHandlers[COMMON_PROP_COUNT];
 
+	static HRESULT __fastcall GetKindProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
 	static HRESULT __fastcall GetHorzSizeProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
 	static HRESULT __fastcall GetVertSizeProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
-	static HRESULT __fastcall GetDimesionsProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
+	static HRESULT __fastcall GetDimensionsProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
+	static HRESULT __fastcall GetBitDepthProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv);
 
 	HRESULT GetValue(_In_reads_(cProps) PCPropHandler rgProps, UINT cProps, REFPROPERTYKEY key, _Inout_ PROPVARIANT* pv) const;
 
@@ -82,9 +84,7 @@ public:
 	HRESULT STDMETHODCALLTYPE GetValue(__RPC__in REFPROPERTYKEY key, __RPC__out PROPVARIANT* pv) override;
 	HRESULT STDMETHODCALLTYPE SetValue(__RPC__in REFPROPERTYKEY key, __RPC__in REFPROPVARIANT propvar) override;
 	HRESULT STDMETHODCALLTYPE Commit();
-
-	HRESULT STDMETHODCALLTYPE GetSite(REFIID riid, void** ppvSite) override;
-    HRESULT STDMETHODCALLTYPE SetSite(IUnknown* pUnkSite) override;
+	HRESULT STDMETHODCALLTYPE IsPropertyWritable(__RPC__in REFPROPERTYKEY key) override;
 };
 
 
@@ -109,12 +109,12 @@ inline PROPERTYKEY* ClearPROPERTYKEY(PROPERTYKEY* ppk)
 
 void ThumbProviderBase::Release_() 
 {
-	if (m_site)
-		m_site->Release();
 	if (m_unkData)
 		m_unkData->Release();
 	if (m_d2dDC)
 		m_d2dDC->Release();
+	if (m_pstmInit)
+		m_pstmInit->Release();
 }
 
 void ThumbProviderBase::Clear()
@@ -131,8 +131,8 @@ WARNING_SUPPRESS(6101 6388 28196)
 HRESULT ThumbProviderBase::QueryInterface(REFIID riid, _COM_Outptr_ void** ppvObject)
 {
 	const HRESULT hr = QueryInterfaceImpl_(riid, ppvObject, 6, QI_ARG(IThumbnailProvider, this),
-			QI_ARG(IInitializeWithStream, this), QI_ARG(IInitializeWithItem, this),
-			QI_ARG(IInitializeWithFile, this), QI_ARG(IPropertyStore, this), QI_ARG(IObjectWithSite, this));
+			QI_ARG(IPropertyStore, this), QI_ARG(IPropertyStoreCapabilities, this),
+			QI_ARG(IInitializeWithStream, this), QI_ARG(IInitializeWithItem, this), QI_ARG(IInitializeWithFile, this));
 	if (S_OK == hr)
 		_InterlockedIncrement(&m_cRef);
 	return hr;
@@ -177,7 +177,15 @@ HRESULT ThumbProviderBase::GetThumbnail(UINT cx, __RPC__deref_out_opt HBITMAP* p
 					pbm->Release();
 				}
 				else if (wcIsDXRecreateError(hr))
+				{
 					Clear();
+					if (m_pstmInit)
+					{
+						hr = Stream_SeekStart(m_pstmInit);
+						if (FAILED(hr) || S_OK != (hr = InitLoad_(m_pstmInit)))
+							SafeRelease(&m_pstmInit);
+					}
+				}
 			}
 		}
 	}
@@ -243,9 +251,11 @@ HRESULT ThumbProviderBase::Initialize(__RPC__in_string LPCWSTR pszFilePath, DWOR
 
 
 const ThumbProviderBase::PropHandler ThumbProviderBase::s_rgPropHandlers[COMMON_PROP_COUNT] = {
-	{ &PKEY_Image_Dimensions, &GetDimesionsProp },
-	{ &PKEY_Image_HorizontalSize, &GetHorzSizeProp },
-	{ &PKEY_Image_VerticalSize, &GetVertSizeProp }
+	{ &PKEY_Kind,					&GetKindProp },
+	{ &PKEY_Image_Dimensions,		&GetDimensionsProp },
+	{ &PKEY_Image_HorizontalSize,	&GetHorzSizeProp },
+	{ &PKEY_Image_VerticalSize,		&GetVertSizeProp },
+	{ &PKEY_Image_BitDepth,			&GetBitDepthProp }
 };
 
 
@@ -268,7 +278,7 @@ HRESULT ThumbProviderBase::GetAt(DWORD iProp, __RPC__out PROPERTYKEY* pkey)
 {
 	if (pkey)
 	{
-		if (iProp < ARRAYSIZE(s_rgPropHandlers))
+		if (iProp < COMMON_PROP_COUNT)
 		{
 			CopyPROPERTYKEY(pkey, *(s_rgPropHandlers[iProp].propKey));
 			return S_OK;
@@ -301,13 +311,26 @@ HRESULT ThumbProviderBase::GetValue(__RPC__in REFPROPERTYKEY key, __RPC__out PRO
 HRESULT ThumbProviderBase::GetValue(_In_reads_(cProps) PCPropHandler rgProps,
 		UINT cProps, REFPROPERTYKEY key, _Inout_ PROPVARIANT* pv) const
 {
-	for (; cProps; cProps++, rgProps++)
+	for (; cProps; cProps--, rgProps++)
 	{
 		if (!IsEqualPropertyKey(*(rgProps->propKey), key))
 			continue;
 		return rgProps->pfnHandler(this, pv);
 	}
 	return E_UNKNOWN_PROPERTY;
+}
+
+
+HRESULT ThumbProviderBase::GetKindProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv)
+{
+	if (pv->pwszVal = (PWSTR)::CoTaskMemAlloc(sizeof(KIND_PICTURE)))
+	{
+		V_VT(pv) = VT_LPWSTR;
+		wmemcpy(pv->pwszVal, KIND_PICTURE, wsizeof(KIND_PICTURE));
+		return S_OK;
+	}
+	V_VT(pv) = VT_EMPTY;
+	return E_OUTOFMEMORY;
 }
 
 HRESULT ThumbProviderBase::GetHorzSizeProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv)
@@ -324,13 +347,15 @@ HRESULT ThumbProviderBase::GetVertSizeProp(_In_ const ThumbProviderBase* pThis, 
 	return S_OK;
 }
 
-HRESULT ThumbProviderBase::GetDimesionsProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv)
+HRESULT ThumbProviderBase::GetDimensionsProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv)
 {
 	WCHAR wcText[40];
 	const D2D_SIZE_U sizeU = wcToImageSizeU(pThis->m_sizeDips);
 	UINT clen = wcUInt32ToDec(sizeU.width, wcText, _countof(wcText));
-	wcText[clen] = L'x';
-	clen++;
+	wcText[clen] = WCHAR_NBSP;			// L' '
+	wcText[clen + 1] = WCHAR_MULTIPLY;	// L'x'
+	wcText[clen + 2] = WCHAR_NBSP;		// L' '
+	clen += 3;
 	clen += wcUInt32ToDec(sizeU.height, wcText + clen, (int)(_countof(wcText) - clen));
 	const PWSTR pwsz = (PWSTR)::CoTaskMemAlloc((SIZE_T)(clen + 1) * sizeof(WCHAR));
 	if (pwsz)
@@ -344,39 +369,31 @@ HRESULT ThumbProviderBase::GetDimesionsProp(_In_ const ThumbProviderBase* pThis,
 	return E_OUTOFMEMORY;
 }
 
+HRESULT ThumbProviderBase::GetBitDepthProp(_In_ const ThumbProviderBase* pThis, _Inout_ PROPVARIANT* pv)
+{
+	V_VT(pv) = VT_UI4;
+	V_UI4(pv) = 32;
+	return S_OK;
+}
+
 
 HRESULT ThumbProviderBase::SetValue(__RPC__in REFPROPERTYKEY key, __RPC__in REFPROPVARIANT propvar)
 {
-	return E_NOTIMPL;
+	return STG_E_ACCESSDENIED;
 }
 
 HRESULT ThumbProviderBase::Commit()
 {
-	return E_NOTIMPL;
+	return STG_E_ACCESSDENIED;
 }
 
 
-// IObjectWithSite ////////////////////////////////////////////////////
+// IPropertyStoreCapabilities /////////////////////////////////////////
 
 
-HRESULT ThumbProviderBase::GetSite(REFIID riid, void** ppvSite)
+HRESULT ThumbProviderBase::IsPropertyWritable(__RPC__in REFPROPERTYKEY key)
 {
-	if (m_site)
-		return m_site->QueryInterface(riid, ppvSite);
-	if (ppvSite)
-		*ppvSite = nullptr;
-	return E_FAIL;
-}
-
-HRESULT ThumbProviderBase::SetSite(IUnknown* pUnkSite)
-{
-	SafeRelease(&m_site);
-	if (pUnkSite)
-	{
-		m_site = pUnkSite;
-		pUnkSite->AddRef();
-	}
-	return S_OK;
+	return S_FALSE;
 }
 
 
@@ -399,23 +416,23 @@ class SvgThumbProvider : public ThumbProviderBase
 	static const PropHandler s_rgPropHandlers[4];
 
 public:
-	SvgThumbProvider(UINT cRef) : ThumbProviderBase(s_rgPropHandlers, ARRAYSIZE(s_rgPropHandlers), cRef) {}\
+	SvgThumbProvider() : ThumbProviderBase(s_rgPropHandlers, ARRAYSIZE(s_rgPropHandlers)) {}
 
 	ZEROINIT_NEW_DELETE
 };
 
 
 const SvgThumbProvider::PropHandler SvgThumbProvider::s_rgPropHandlers[4] = {
-	{ &PKEY_Title, reinterpret_cast<PROPHANDLERPROC>(&GetTitleProp) },
-	{ &PKEY_Comment, reinterpret_cast<PROPHANDLERPROC>(&GetDescProp) },
-	{ &PKEY_Subject, reinterpret_cast<PROPHANDLERPROC>(&GetDescProp) },
-	{ &PKEY_Image_ResolutionUnit, reinterpret_cast<PROPHANDLERPROC>(&GetResUnitProp) }
+	{ &PKEY_Title,					reinterpret_cast<PROPHANDLERPROC>(&GetTitleProp) },
+	{ &PKEY_Comment,				reinterpret_cast<PROPHANDLERPROC>(&GetDescProp) },
+	{ &PKEY_Subject,				reinterpret_cast<PROPHANDLERPROC>(&GetDescProp) },
+	{ &PKEY_Image_ResolutionUnit,	reinterpret_cast<PROPHANDLERPROC>(&GetResUnitProp) }
 };
 
 
 HRESULT SvgThumbProvider::InitLoad_(_In_ IStream* pstm)
 {
-	return InitLoadSvg(pstm, &m_d2dDC, &m_svgDoc, &m_sizeDips);
+	return InitLoadSvg(pstm, (pstm != m_pstmInit) ? &m_pstmInit : nullptr, &m_d2dDC, &m_svgDoc, &m_sizeDips);
 }
 
 _Success_(return == S_OK)
@@ -500,21 +517,21 @@ class WmfThumbProvider : public ThumbProviderBase
 	static const PropHandler s_rgPropHandlers[2];
 
 public:
-	WmfThumbProvider(UINT cRef) : ThumbProviderBase(s_rgPropHandlers, ARRAYSIZE(s_rgPropHandlers), cRef) {}
+	WmfThumbProvider() : ThumbProviderBase(s_rgPropHandlers, ARRAYSIZE(s_rgPropHandlers)) {}
 
 	ZEROINIT_NEW_DELETE
 };
 
 
 const WmfThumbProvider::PropHandler WmfThumbProvider::s_rgPropHandlers[2] = {
-	{ &PKEY_Image_HorizontalResolution, reinterpret_cast<PROPHANDLERPROC>(&GetHorzDpiProp) },
-	{ &PKEY_Image_VerticalResolution, reinterpret_cast<PROPHANDLERPROC>(&GetVertDpiProp) }
+	{ &PKEY_Image_HorizontalResolution,	reinterpret_cast<PROPHANDLERPROC>(&GetHorzDpiProp) },
+	{ &PKEY_Image_VerticalResolution,	reinterpret_cast<PROPHANDLERPROC>(&GetVertDpiProp) }
 };
 
 
 HRESULT WmfThumbProvider::InitLoad_(_In_ IStream* pstm)
 {
-	return InitLoadWmf(pstm, &m_d2dDC, &m_metafile, &m_ptOrigin, &m_sizeDips);
+	return InitLoadWmf(pstm, (pstm != m_pstmInit) ? &m_pstmInit : nullptr, &m_d2dDC, &m_metafile, &m_ptOrigin, &m_sizeDips);
 }
 
 _Success_(return == S_OK)
@@ -553,19 +570,13 @@ HRESULT WmfThumbProvider::GetResolution(bool vertical, _Inout_ PROPVARIANT* pv) 
 	ASSUME(VT_EMPTY == V_VT(pv));
 	if (m_metafile)
 	{
-		ID2D1GdiMetafile1* meta1;
-		hr = S_OK;
-		if (S_OK == m_metafile->QueryInterface(IID_ID2D1GdiMetafile1, PPV_ARG(&meta1)))
+		FLOAT dpiX = 0, dpiY = 0;
+		hr = m_metafile->GetDpi(&dpiX, &dpiY);
+		if (SUCCEEDED(hr))
 		{
-			FLOAT dpiX = 0, dpiY = 0;
-			hr = meta1->GetDpi(&dpiX, &dpiY);
-			if (SUCCEEDED(hr))
-			{
-				V_VT(pv) = VT_R8;
-				V_R8(pv) = (vertical ? dpiY : dpiX);
-				hr = S_OK;
-			}
-			meta1->Release();
+			V_VT(pv) = VT_R8;
+			V_R8(pv) = (vertical ? dpiY : dpiX);
+			hr = S_OK;
 		}
 	}
 	return hr;
@@ -585,37 +596,37 @@ HRESULT __fastcall CreateXThumbProvider(_In_ REFIID riid, _COM_Outptr_result_nul
 	HRESULT hr = E_NOINTERFACE;
 	if (IsEqualGUID2(riid, IID_IThumbnailProvider, IID_IUnknown))
 	{
-		if (*ppvObject = static_cast<IThumbnailProvider*>(new TP(1)))
+		if (*ppvObject = static_cast<IThumbnailProvider*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
 	else if (IsEqualIID(riid, IID_IInitializeWithStream))
 	{
-		if (*ppvObject = static_cast<IInitializeWithStream*>(new TP(1)))
+		if (*ppvObject = static_cast<IInitializeWithStream*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
 	else if (IsEqualIID(riid, IID_IInitializeWithItem))
 	{
-		if (*ppvObject = static_cast<IInitializeWithItem*>(new TP(1)))
+		if (*ppvObject = static_cast<IInitializeWithItem*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
 	else if (IsEqualIID(riid, IID_IInitializeWithFile))
 	{
-		if (*ppvObject = static_cast<IInitializeWithFile*>(new TP(1)))
+		if (*ppvObject = static_cast<IInitializeWithFile*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
 	else if (IsEqualIID(riid, IID_IPropertyStore))
 	{
-		if (*ppvObject = static_cast<IPropertyStore*>(new TP(1)))
+		if (*ppvObject = static_cast<IPropertyStore*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}
-	else if (IsEqualIID(riid, IID_IObjectWithSite))
+	else if (IsEqualIID(riid, IID_IPropertyStoreCapabilities))
 	{
-		if (*ppvObject = static_cast<IObjectWithSite*>(new TP(1)))
+		if (*ppvObject = static_cast<IPropertyStoreCapabilities*>(new TP()))
 			return S_OK;
 		hr = E_OUTOFMEMORY;
 	}

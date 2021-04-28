@@ -15,9 +15,11 @@
 	<String Id="SVGDecoder">SVG decoder</String>
 	<String Id="WMFDecoder">WMF/EMF decoder</String>
 	<String Id="SVGThumbs">SVG thumbnail provider</String>
-	<String Id="SVGThumbsDescr">SVG thumbnail provider for File Explorer.</String>
+	<String Id="SVGThumbsDescr">SVG thumbnail and property provider for File Explorer.</String>
 	<String Id="WMFThumbs">WMF/EMF thumbnail provider</String>
-	<String Id="WMFThumbsDescr">WMF/EMF thumbnail provider for File Explorer.</String>
+	<String Id="WMFThumbsDescr">WMF/EMF thumbnail and property provider for File Explorer.</String>
+	<String Id="DisableProcessIsolation">Run in Explorer process</String>
+	<String Id="DisableProcessIsolationDescr">Run in Explorer process, disable default process isolation.</String>
 
 	<String Id="PermissionTextFile">LicPermission_en-us.txt</String>
 	<String Id="WelcomePrompt">Click Next to install [ProductName] or Cancel to exit the Wizard.</String>

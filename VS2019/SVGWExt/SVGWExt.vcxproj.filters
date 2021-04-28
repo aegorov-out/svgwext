@@ -85,6 +85,9 @@
     <ClCompile Include="zlib\trees.c">
       <Filter>zlib\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TDLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">

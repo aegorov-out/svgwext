@@ -15,9 +15,11 @@
 	<String Id="SVGDecoder">Декодер SVG</String>
 	<String Id="WMFDecoder">Декодер WMF/EMF</String>
 	<String Id="SVGThumbs">Эскизы SVG</String>
-	<String Id="SVGThumbsDescr">Эскизы SVG для проводника Windows.</String>
+	<String Id="SVGThumbsDescr">Эскизы и сцойства SVG для проводника Windows.</String>
 	<String Id="WMFThumbs">Эскизы WMF/EMF</String>
-	<String Id="WMFThumbsDescr">Эскизы WMF/EMF для проводника Windows.</String>
+	<String Id="WMFThumbsDescr">Эскизы и сцойства WMF/EMF для проводника Windows.</String>
+	<String Id="DisableProcessIsolation">Запускать напрямую в Проводнике</String>
+	<String Id="DisableProcessIsolationDescr">Запускать напрямую в процессе Проводника, не использовать изоляцию по умолчанию.</String>
 
 	<String Id="PermissionTextFile">LicPermission_ru-ru.txt</String>
 	<String Id="WelcomePrompt">Нажмите "Далее", чтобы продолжить, или "Отмена", чтобы выйти из мастера установки.</String>

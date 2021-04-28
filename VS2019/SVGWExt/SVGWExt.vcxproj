@@ -181,7 +181,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <PreprocessorDefinitions>SVGWEXT_EXPORTS;NDEBUG;RELEASE;_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SVGWEXT_EXPORTS;WCX_LOG_APPEND;NDEBUG;RELEASE;_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -237,7 +237,7 @@ rmdir $(SolutionDir)common\lib</Command>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <PreprocessorDefinitions>SVGWEXT_EXPORTS;NDEBUG;RELEASE;_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SVGWEXT_EXPORTS;WCX_LOG_APPEND;NDEBUG;RELEASE;_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -250,8 +250,6 @@ rmdir $(SolutionDir)common\lib</Command>
       <EnablePREfast>true</EnablePREfast>
       <AdditionalIncludeDirectories>$(SolutionDir)common\Include\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>28251</DisableSpecificWarnings>
-      <CallingConvention>
-      </CallingConvention>
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
@@ -307,6 +305,10 @@ rmdir $(SolutionDir)common\lib</Command>
   <ItemGroup>
     <ClCompile Include="BaseDecoder.cpp" />
     <ClCompile Include="BaseInfo.cpp">
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Size</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Size</FavorSizeOrSpeed>
+    </ClCompile>
+    <ClCompile Include="TDLog.cpp">
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Size</FavorSizeOrSpeed>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Size</FavorSizeOrSpeed>
     </ClCompile>

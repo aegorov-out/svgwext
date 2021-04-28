@@ -670,7 +670,7 @@ _Check_return_ WCXFASTAPI wcMatchesGzipPattern(_In_ IStream* pstm, _Out_opt_ PUI
 }
 
 _Success_(return == S_OK) WCXSTDAPI
-wcUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut)
+wcTryUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut)
 {
 	return GZipInflate::Create(pstmIn, headersOnly, ppstmOut);
 }

@@ -9,72 +9,120 @@
 namespace RootNamespace {
 
 ///////////////////////////////////////////////////////////////////////
-// SVG decoder ////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
+// WMF decoder ////////////////////////////////////////////////////////
+
+static bool g_wmfSuccess = false;
+static bool g_wmfInfoFail = false;
+static inline bool WmfCopyStream() { return AllTrue(!g_wmfSuccess, g_wmfInfoFail); }
+
+
+WARNING_SUPPRESS(6101) _Success_(return == S_OK) NOALIAS NOINLINE
+static HRESULT CreateMetafile(bool setGlobals, _In_ IStream* pstm, _In_ ID2D1Factory1* d2dFactory,
+		_COM_Outptr_ ID2D1GdiMetafile1** ppMetafile, _Out_ D2D_RECT_F* prcBounds)
+{
+	ID2D1GdiMetafile* metafile;
+	HRESULT hr = d2dFactory->CreateGdiMetafile(pstm, &metafile);
+	if (S_OK == hr)
+	{
+		hr = metafile->QueryInterface(IID_ID2D1GdiMetafile1, PPV_ARG(ppMetafile));
+		metafile->Release();
+		metafile = *ppMetafile;
+		if (S_OK == hr)
+		{
+			hr = metafile->GetBounds(prcBounds);
+			if (S_OK == hr || S_OK == (hr = reinterpret_cast<ID2D1GdiMetafile1*>(metafile)->GetSourceBounds(prcBounds)))
+			{
+				if (IsZero(prcBounds->left))
+					prcBounds->left = 0;
+				if (IsZero(prcBounds->top))
+					prcBounds->top = 0;
+				if (AllTrue(prcBounds->right > prcBounds->left, prcBounds->bottom > prcBounds->top))
+				{
+					if (setGlobals)
+						g_wmfSuccess = true;
+					return S_OK;
+				}
+				hr = WINCODEC_ERR_IMAGESIZEOUTOFRANGE;
+			}
+			else if (AllTrue(FAILED(hr), setGlobals))
+				g_wmfInfoFail = true;
+			metafile->Release();
+		}
+	}
+	return hr;
+}
 
 
 _Success_(return == S_OK) NOALIAS
-HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
-		_COM_Outptr_result_nullonfailure_ ID2D1GdiMetafile** ppMetafile, _Out_ D2D_POINT_2F* pOrigin, _Out_ D2D_SIZE_F* pSize)
+HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_opt_result_maybenull_ IStream** ppstmTemp,
+		_COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
+		_COM_Outptr_result_nullonfailure_ ID2D1GdiMetafile1** ppMetafile,
+		_Out_ D2D_POINT_2F* pOrigin, _Out_ D2D_SIZE_F* pSize)
 {
-	/*CHAR _steps[256];
-	_steps[0] = 0;*/
+	IStream* pstmMem = nullptr;
+	HRESULT hr;
 
-	IStream* pstmInf;
-	HRESULT hr = wcUncompressStream(pstm, FALSE, &pstmInf);
-	if (S_OK == hr)
-		pstm = pstmInf;
-	else if (IsUnknownImage(hr))
-		pstm->AddRef();
-	else
-		goto Error_;
+	if (ppstmTemp)
+	{
+		WARNING_SUPPRESS(6001) ASSERT(NULL == *ppstmTemp);
+		hr = wcTryUncompressStream(pstm, FALSE, &pstmMem);
+		if (S_OK == hr)
+		{
+			pstm = pstmMem;
+			*ppstmTemp = pstmMem;
+		}
+		else
+		{
+			*ppstmTemp = nullptr;
+			if (!IsUnknownImage(hr))
+				goto Error_;
+		}
+	}
 
-	//strcpy(_steps, ">Begin");
 	hr = CreateD2DC(ppDC);
 	if (S_OK == hr)
 	{
-		//strcat(_steps, " CreateD2DC");
-		union {
-			ID2D1Factory6* d2dFactory;
-			D2D_RECT_F rcBounds;
-		};
+		ID2D1Factory6* d2dFactory;
 		hr = GetD2DFactory(&d2dFactory);
 		if (S_OK == hr)
 		{
-			//strcat(_steps, " GetD2DFactory");
-			hr = d2dFactory->CreateGdiMetafile(pstm, ppMetafile);
+			D2D_RECT_F rcBounds;
+			hr = HRESULT_INVALID;
+			if (!WmfCopyStream())
+				hr = CreateMetafile(true, pstm, d2dFactory, ppMetafile, &rcBounds);
+			if (AllTrue(S_OK != hr, ppstmTemp, !pstmMem) && AnyTrue(g_wmfInfoFail, E_FAIL == hr))
+			{
+				ASSUME(ppstmTemp && !pstmMem);
+				hr = wcCopyTempStream(pstm, 0, &pstmMem);
+				if (S_OK == hr)
+				{
+					hr = CreateMetafile(false, pstmMem, d2dFactory, ppMetafile, &rcBounds);
+					if (S_OK == hr)
+					{
+						pstm = pstmMem;
+						*ppstmTemp = pstmMem;
+					}
+				}
+			}
 			d2dFactory->Release();
 			if (S_OK == hr)
 			{
-				//strcat(_steps, " CreateGdiMetafile");
-				hr = (*ppMetafile)->GetBounds(&rcBounds);
-				if (S_OK == hr)
-				{
-					//strcat(_steps, " GetBounds");
-					pSize->width = rcBounds.right - rcBounds.left;
-					pSize->height = rcBounds.bottom - rcBounds.top;
-					if (AllTrue(IsZero(rcBounds.left), IsZero(rcBounds.top)))
-						Zero8Bytes(pOrigin);
-					else
-						Copy8Bytes(pOrigin, &rcBounds);
-					if (AllTrue(pSize->width > 0, pSize->height > 0))
-					{
-						//strcat(_steps, " OK!");
-						pstm->Release();
-						return S_OK;
-					}
-					hr = WINCODEC_ERR_IMAGESIZEOUTOFRANGE;
-				}
-				(*ppMetafile)->Release();
+				Copy8Bytes(pOrigin, &rcBounds);
+				pSize->width = rcBounds.right - rcBounds.left;
+				pSize->height = rcBounds.bottom - rcBounds.top;
+				return S_OK;
 			}
 		}
 		(*ppDC)->Release();
 	}
-	pstm->Release();
+
+	if (pstmMem)
+	{
+		pstmMem->Release();
+		*ppstmTemp = nullptr;
+	}
 
 Error_:
-	//wcLogWriteLn("WMF/EMF load error");
-	//wcLogFormatStat(pstm, ": 0x%.8X (%s)\r\n", hr, _steps);
 	Zero8Bytes(pSize);
 	*ppMetafile = nullptr;
 	*ppDC = nullptr;
@@ -101,30 +149,9 @@ HRESULT WmfDecoder::QueryCapability(__RPC__in_opt IStream* pIStream, __RPC__out 
 }
 
 
-HRESULT WmfDecoder::Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions cacheOptions)
+HRESULT WmfDecoder::InitLoad(_In_ IStream* pstm)
 {
-	HRESULT hr = E_INVALIDARG;
-	if (pIStream)
-	{
-		EnterCS();
-		hr = WINCODEC_ERR_WRONGSTATE;
-		__try
-		{
-			if (IsClear())
-			{
-				hr = InitLoadWmf(pIStream, &m_d2dDC, &m_metafile, &m_ptOrigin, &m_sizeDips);
-				if (S_OK == hr)
-					m_screenDpi = GetScreenDpi();
-				else if (AnyTrue(SUCCEEDED(hr), E_FAIL == hr))
-					hr = WINCODEC_ERR_UNKNOWNIMAGEFORMAT;
-			}
-		}
-		__finally
-		{
-			LeaveCS();
-		}
-	}
-	return hr;
+	return InitLoadWmf(pstm, (pstm != m_pstmInit) ? &m_pstmInit : nullptr, &m_d2dDC, &m_metafile, &m_ptOrigin, &m_sizeDips);
 }
 
 
@@ -272,7 +299,7 @@ HRESULT WmfDecoderInfo::GetFriendlyName(UINT cchFriendlyName,
 	__RPC__inout_ecount_full_opt(cchFriendlyName) WCHAR* wzFriendlyName, __RPC__out UINT* pcchActual)
 {
 	WCHAR wcName[ALIGN4(_countof(WMF_DECODER_NAMEA) + 1)];
-	return ReturnInfoRealString(wcName, wcAsciiToWide(WMF_DECODER_NAMEA, _countof(wcName), wcName),
+	return ReturnInfoRealString(wcName, wcAsciiToWide(WMF_DECODER_NAMEA, wcName, _countof(wcName)),
 			cchFriendlyName, wzFriendlyName, pcchActual);
 }
 
@@ -369,7 +396,7 @@ static HRESULT CALLBACK MatchesWmfEmfPattern(_In_ IStream* pstm, UINT64, _Out_op
 	if (S_FALSE == hr)
 	{
 		IStream* pstmInf;
-		hr = wcUncompressStream(pstm, TRUE, &pstmInf);
+		hr = wcTryUncompressStream(pstm, TRUE, &pstmInf);
 		if (S_OK == hr)
 		{
 			hr = ReadWmfEmfPattern(pstmInf, nullptr);

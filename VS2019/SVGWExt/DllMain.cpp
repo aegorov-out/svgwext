@@ -59,7 +59,7 @@ extern "C" BOOL WINAPI DllMain(_In_ HINSTANCE hinstDll, DWORD fdwReason, LPVOID 
 	#endif
 		wcInitCommonCS(&g_CS);
 		g_initFlags |= INITF_CSINIT;
-	#if defined(WCX_ENABLE_LOG) && !defined(_DEBUG)
+	#ifdef WCX_ENABLE_LOG
 		if (!staticLoad)
 			wcLogCreate();
 	#endif

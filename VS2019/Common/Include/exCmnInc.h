@@ -145,20 +145,21 @@
 #define INLINE			__inline
 #endif	// __cplusplus
 #endif
-#ifndef _INLINE
-#define _INLINE			INLINE
-#endif
 
 #ifndef FORCEINLINE
 #define FORCEINLINE		__forceinline
 #endif
 
 #ifndef NOINLINE
-#define NOINLINE		__declspec(noinline)
+#define NOINLINE		DECLSPEC_NOINLINE
 #endif
 
 #ifndef NOVTABLE
-#define NOVTABLE		__declspec(novtable)
+#define NOVTABLE		DECLSPEC_NOVTABLE
+#endif
+
+#ifndef SELECTANY
+#define SELECTANY		DECLSPEC_SELECTANY
 #endif
 	
 #ifndef NOALIAS
@@ -166,20 +167,24 @@
 #endif
 
 #ifndef RESTRICT
-#define RESTRICT		__declspec(restrict)
+#define RESTRICT		DECLSPEC_RESTRICT
 #endif
 
 #ifndef ALLOCATOR
 #define ALLOCATOR		__declspec(allocator)
 #endif
 
+#ifndef DECLUUID
+#define DECLUUID(guid)	DECLSPEC_UUID(guid)
+#endif
+
 
 #define CPU_CACHE_LINE_SIZE	64
 #define MM_MEMORY_ALIGN		CPU_CACHE_LINE_SIZE
 
-#define ALIGNOF(x)		alignof(x)
+#define ALIGNOF(x)		TYPE_ALIGNMENT(x)
 #define ALIGNAS(n)		alignas(n)
-#define DECLALIGN(n)	__declspec(align(n))
+#define DECLALIGN(n)	DECLSPEC_ALIGN(n)
 #define DECLALIGN4		DECLALIGN(4)
 #define DECLALIGN8		DECLALIGN(8)
 #define DECLALIGN16		DECLALIGN(16)

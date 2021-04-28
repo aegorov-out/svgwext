@@ -9,53 +9,57 @@ namespace RootNamespace {
 
 ///////////////////////////////////////////////////////////////////////
 // SVG decoder ////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
 
 
 _Success_(return == S_OK) NOALIAS
-HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
+HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_opt_result_maybenull_ IStream** ppstmTemp,
+		_COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
 		_COM_Outptr_result_nullonfailure_ ID2D1SvgDocument** ppSvg, _Out_ D2D_SIZE_F* pSize)
 {
-	/*CHAR _steps[256];
-	_steps[0] = 0;*/
+	IStream* pstmMem = nullptr;
+	HRESULT hr;
 
-	IStream* pstmInf;
-	HRESULT hr = wcUncompressStream(pstm, FALSE, &pstmInf);
-	if (S_OK == hr)
-		pstm = pstmInf;
-	else if (IsUnknownImage(hr))
-		pstm->AddRef();
-	else
-		goto Error_;
+	if (ppstmTemp)
+	{
+		WARNING_SUPPRESS(6001) ASSERT(NULL == *ppstmTemp);
+		hr = wcTryUncompressStream(pstm, FALSE, &pstmMem);
+		if (S_OK == hr)
+		{
+			pstm = pstmMem;
+			*ppstmTemp = pstmMem;
+		}
+		else
+		{
+			*ppstmTemp = nullptr;
+			if (!IsUnknownImage(hr))
+				goto Error_;
+		}
+	}
 
-	//strcpy(_steps, ">Begin");
 	hr = CreateD2DC(ppDC);
 	if (S_OK == hr)
 	{
-		//strcat(_steps, " CreateD2DC");
 		hr = (*ppDC)->CreateSvgDocument(pstm, InitialSvgSize(), ppSvg);
 		if (S_OK == hr)
 		{
-			//strcat(_steps, " CreateSvgDocument");
 			hr = wcUpdateSvgSize(*ppSvg, true, pSize);
 			if (S_OK == hr)
-			{
-				//strcat(_steps, " wcUpdateSvgSize...OK!");
-				pstm->Release();
 				return S_OK;
-			}
 			(*ppSvg)->Release();
 		}
 		(*ppDC)->Release();
 	}
-	pstm->Release();
+
+	if (pstmMem)
+	{
+		pstmMem->Release();
+		*ppstmTemp = nullptr;
+	}
 
 Error_:
-	//wcLogWriteLn("SVG load error");
-	//wcLogFormatStat(pstm, ": 0x%.8X (%s)\r\n", hr, _steps);
 	Zero8Bytes(pSize);
 	*ppSvg = nullptr;
-	*ppDC = nullptr;
+	*ppDC = nullptr;;
 	return hr;
 }
 
@@ -79,30 +83,9 @@ HRESULT SvgDecoder::QueryCapability(__RPC__in_opt IStream* pIStream, __RPC__out 
 }
 
 
-HRESULT SvgDecoder::Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions cacheOptions)
+HRESULT SvgDecoder::InitLoad(_In_ IStream* pstm)
 {
-	HRESULT hr = E_INVALIDARG;
-	if (pIStream)
-	{
-		EnterCS();
-		hr = WINCODEC_ERR_WRONGSTATE;
-		__try
-		{
-			if (IsClear())
-			{
-				hr = InitLoadSvg(pIStream, &m_d2dDC, &m_svgDoc, &m_sizeDips);
-				if (S_OK == hr)
-					m_screenDpi = GetScreenDpi();
-				else if (AnyTrue(SUCCEEDED(hr), E_FAIL == hr))
-					hr = WINCODEC_ERR_UNKNOWNIMAGEFORMAT;
-			}
-		}
-		__finally
-		{
-			LeaveCS();
-		}	
-	}
-	return hr;
+	return InitLoadSvg(pstm, (pstm != m_pstmInit) ? &m_pstmInit : nullptr, &m_d2dDC, &m_svgDoc, &m_sizeDips);
 }
 
 
@@ -229,7 +212,7 @@ HRESULT SvgDecoderInfo::GetFriendlyName(UINT cchFriendlyName,
 	__RPC__inout_ecount_full_opt(cchFriendlyName) WCHAR* wzFriendlyName, __RPC__out UINT* pcchActual)
 {
 	WCHAR wcName[ALIGN4(_countof(SVG_DECODER_NAMEA) + 1)];
-	return ReturnInfoRealString(wcName, wcAsciiToWide(SVG_DECODER_NAMEA, _countof(wcName), wcName),
+	return ReturnInfoRealString(wcName, wcAsciiToWide(SVG_DECODER_NAMEA, wcName, _countof(wcName)),
 			cchFriendlyName, wzFriendlyName, pcchActual);
 }
 

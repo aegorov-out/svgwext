@@ -1,59 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?if $(var.Platform) = x64?>
-	<?define Win64 = "yes"?>
-	<?define WinVer = "VersionNT64"?>
-	<?define ProgramFilesDir = "ProgramFiles64Folder"?>
-	<?define PlatformUIText = "(64-bit)"?>
-	<?define UpgradeCode="0A423FBD-1ECF-4DD6-BD63-CDF914E2792F"?>
-<?else?>
-	<?define Win64 = "no"?>
-	<?define WinVer = "VersionNT"?>
-	<?define ProgramFilesDir = "ProgramFilesFolder"?>
-	<?define PlatformUIText = "(32-bit)"?>
-	<?define UpgradeCode="0A423FBD-1ECF-4DD6-BD63-CDF914E2792E"?>
-<?endif?>
-
-<?define ProductId="EB8EE7FC-449D-4451-A5E9-721C49A4B892"?>
-<?define ProductVersion="1.0.2021"?>
-<?define ProductName="SVG/WMF Extension"?>
-<?define ProductDescr="SVG/WMF/EMF WIC decoder and thumbnail provider"?>
-<?define KeyName="SVGWExt"?>
-<?ifdef Debug?>
-<?define FileSourcePath = "$(var.SolutionDir)..\.$(var.Configuration)\$(var.Platform)\"?>
-<?else?>
-<?define FileSourcePath = "$(var.SolutionDir)..\$(var.Configuration)\$(var.Platform)\"?>
-<?endif?>
-<?define ResourcePath = "$(var.SolutionDir)RES"?>
-<?define ProductURL = "https://github.com/aegorov-out/svgwext"?>
-
-<?define MainFilesGuid="C1D96019-6E8C-46D6-9CE2-4708E80D9FB0"?>
-<?define DocFilesGuid="CF09209C-ADC8-4D13-9924-0BB0CF7C45A4"?>
-<?define SVGDecoderGuid="C39CB54F-764E-428A-B76E-A59312864F1D"?>
-<?define WMFDecoderGuid="C9F22879-5259-4416-AF8D-50720CE2C6A5"?>
-<?define SVGThumbsGuid="C650E6FD-4154-466E-82AA-C835D8871014"?>
-<?define WMFThumbsGuid="CF74B553-FE24-4944-8CCC-68DBDE2E3236"?>
-<?define SVGTypesGuid="C0A2E0C4-F5C9-4A7D-948F-F7F59C539B68"?>
-<?define WMFTypesGuid="C1F7EAFE-AB85-43A7-A714-178EF6986470"?>
-
-<?define CLSID_SvgDecoder="{0FF41E38-A793-45FF-9F38-5278DC444D57}"?>
-<?define CLSID_WmfDecoder="{9DDB0D52-BDEE-4451-903D-27B29FA407B0}"?>
-<?define CLSID_SvgThumbnailProvider="{A3699533-14C8-4D18-80A4-3484B11EDC85}"?>
-<?define CLSID_WmfThumbnailProvider="{ACDB5DAE-C8D0-4443-A86D-CE94E679670C}"?>
-<?define GUID_AE_VendorID="{AE97E52A-51BC-41FB-871A-FC9B86FB20A2}"?>
-<?define GUID_ContainerFormatSvg="{28EA8895-834D-4941-8794-7EE5B5A05356}"?>
-<?define GUID_ContainerFormatWmf="{C1D289A3-A846-47C7-9F94-E5E8F6AC4D46}"?>
-<?define GUID_WICPixelFormat32bppBGRA="{6FDDC324-4E03-4BFE-B185-3D77768DC90F}"?>
-<?define GUID_WICPixelFormat32bppPBGRA="{6FDDC324-4E03-4BFE-B185-3D77768DC910}"?>
-
-<?define RegPath_Setup="Software\Microsoft\Windows\CurrentVersion"?>
-<?define RegPath_SetupNT="Software\Microsoft\Windows NT\CurrentVersion"?>
-<?define RegPath_WICDecoders="CLSID\{7ED96837-96F0-4812-B211-F13C24117ED3}\Instance"?>
-<?define RegPath_ThumbExt="ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"?>
-
-<?define InstallLevel = "9"?>
-<?define NoInstallLevel = "11"?>
-
+<?include Variables.wxi?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 	<Product Id="$(var.ProductId)" Name="$(var.ProductName) $(var.PlatformUIText)" Version="$(var.ProductVersion).0"
@@ -106,10 +53,10 @@
 		<PropertyRef Id="EMZKINDSET"/>
 		
 		<Property Id="SVGTHUMBSIN">
-			<ComponentSearch Id="SVGThumbsIn" Guid="$(var.SVGThumbsGuid)"/>
+			<ComponentSearch Id="SVGThumbsIn" Guid="$(var.SvgThumbsGuid)"/>
 		</Property>
 		<Property Id="WMFTHUMBSIN">
-			<ComponentSearch Id="WMFThumbsIn" Guid="$(var.WMFThumbsGuid)"/>
+			<ComponentSearch Id="WMFThumbsIn" Guid="$(var.WmfThumbsGuid)"/>
 		</Property>
 		
 		<Directory Id="TARGETDIR" Name="SourceDir">
@@ -132,7 +79,7 @@
 		<ComponentGroup Id="MainProgram" Directory="INSTALLDIR">
 			
 			<Component Id="MainFiles" Guid="$(var.MainFilesGuid)" Win64="$(var.Win64)">
-				<File Id="MainDll" Name="$(var.KeyName).dll" KeyPath="yes" Vital="yes" Checksum="yes" Source="$(var.FileSourcePath)\$(var.KeyName).dll"/>
+				<File Id="MainDll" Name="$(var.KeyName).dll" KeyPath="yes" Vital="yes" Checksum="yes" Source="$(var.FileSourcePath)$(var.KeyName).dll"/>
 			</Component>
 			<Component Id="DocFiles" Guid="$(var.DocFilesGuid)">
 				<File Id="LicenseTxt" Name="License.txt" ShortName="License.txt" Source="Res\gpl-3.0.txt"/>
@@ -140,7 +87,7 @@
 				<File Id="SourceZipUrl" Name="Download source.url" ShortName="SrcZip.url" Source="Res\SourceZip.url"/>
 			</Component>
 			
-			<Component Id="SVGDecoder" Guid="$(var.SVGDecoderGuid)">
+			<Component Id="SVGDecoder" Guid="$(var.SvgDecoderGuid)">
 				
 				<RegistryKey Root="HKCR" Key="CLSID\$(var.CLSID_SvgDecoder)" ForceDeleteOnUninstall="yes">				
 					<RegistryValue Type="string" Value="!(loc.SVGDecoder)"/>
@@ -170,7 +117,7 @@
 				
 			</Component>
 				
-			<Component Id="WMFDecoder" Guid="$(var.WMFDecoderGuid)">
+			<Component Id="WMFDecoder" Guid="$(var.WmfDecoderGuid)">
 				
 				<RegistryKey Root="HKCR" Key="CLSID\$(var.CLSID_WmfDecoder)" ForceDeleteOnUninstall="yes">
 					<RegistryValue Type="string" Value="!(loc.WMFDecoder)"/>
@@ -236,7 +183,7 @@
 	</Fragment>
 	
 	<Fragment>
-		<Component Id="SVGThumbs" Directory="INSTALLDIR" Guid="$(var.SVGThumbsGuid)">
+		<Component Id="SVGThumbs" Directory="INSTALLDIR" Guid="$(var.SvgThumbsGuid)">
 			
 			<RegistryKey Root="HKCR" Key="CLSID\$(var.CLSID_SvgThumbnailProvider)" ForceDeleteOnUninstall="yes">
 				<RegistryValue Type="string" Value="!(loc.SVGThumbs)"/>
@@ -251,14 +198,35 @@
 				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
 				<RegistryValue Key="DefaultIcon" Type="string" Value="[#MainDll],-101"/>
 			</RegistryKey>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.svg\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.svg"
+					Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.svg">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.SvgExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.SvgInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.SvgPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.SvgFullDetails)"/>
+			</RegistryKey>
 
 			<RegistryKey Root="HKCR" Key=".svgz">
 				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
 				<RegistryValue Key="DefaultIcon" Type="string" Value="[#MainDll],-102"/>
 			</RegistryKey>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.svgz\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.svgz"
+					Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.svgz">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_SvgThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.SvgExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.SvgInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.SvgPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.SvgFullDetails)"/>
+			</RegistryKey>
 			
+		</Component>
+		
+		<Component Id="SVGNoIsolation" Directory="INSTALLDIR">
+			<Condition><![CDATA[$SVGThumbs = 3 OR (?SVGThumbs = 3 AND $SVGThumbs = -1)]]></Condition>
+			<RegistryValue Root="HKCR" Key="CLSID\$(var.CLSID_SvgThumbnailProvider)" Name="DisableProcessIsolation" Type="integer" Value="1"/>
 		</Component>
 		
 		<Feature Id="SVGThumbs" Absent="allow" AllowAdvertise="no" InstallDefault="local"
@@ -269,11 +237,17 @@
 			
 			<Condition Level="$(var.NoInstallLevel)"><![CDATA[Installed AND (NOT SVGTHUMBSIN)]]></Condition>
 			
+			<Feature Id="SVGNoIsolation" Absent="allow" AllowAdvertise="no" InstallDefault="followParent"
+						Level="$(var.NoInstallLevel)" Title="!(loc.DisableProcessIsolation)" Description="!(loc.DisableProcessIsolationDescr)">
+				<ComponentRef Id="SVGNoIsolation"/>
+				<Condition Level="$(var.InstallLevel)"><![CDATA[Installed AND ?SVGNoIsolation = 3]]></Condition>
+			</Feature>
+			
 		</Feature>
 	</Fragment>
 	
 	<Fragment>
-		<Component Id="WMFThumbs" Directory="INSTALLDIR" Guid="$(var.WMFThumbsGuid)">
+		<Component Id="WMFThumbs" Directory="INSTALLDIR" Guid="$(var.WmfThumbsGuid)">
 			
 			<RegistryKey Root="HKCR" Key="CLSID\$(var.CLSID_WmfThumbnailProvider)" ForceDeleteOnUninstall="yes">
 				<RegistryValue Type="string" Value="!(loc.WMFThumbs)"/>
@@ -285,26 +259,69 @@
 			</RegistryKey>
 
 			<RegistryValue Root="HKCR" Key=".emf\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.emf\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.emf"
+					Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.emf">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.WmfExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.WmfInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.WmfPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.WmfFullDetails)"/>
+			</RegistryKey>
 			
 			<RegistryValue Root="HKCR" Key=".emz\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.emz\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.emz"
+					Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.emz">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.WmfExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.WmfInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.WmfPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.WmfFullDetails)"/>
+			</RegistryKey>
 			
 			<RegistryValue Root="HKCR" Key=".wmf\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.wmf\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.wmf"
+					Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.wmf">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.WmfExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.WmfInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.WmfPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.WmfFullDetails)"/>
+			</RegistryKey>
 			
 			<RegistryValue Root="HKCR" Key=".wmz\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
-			<RegistryValue Root="HKCR" Key="SystemFileAssociations\.wmz\$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryValue Root="HKLM" Key="$(var.RegPath_PropHandlers)\.wmz"
+					Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+			<RegistryKey Root="HKCR" Key="SystemFileAssociations\.wmz">
+				<RegistryValue Key="$(var.RegPath_ThumbExt)" Type="string" Value="$(var.CLSID_WmfThumbnailProvider)"/>
+				<RegistryValue Type="string" Name="ExtendedTileInfo" Value="$(var.WmfExtendedTileInfo)"/>
+				<RegistryValue Type="string" Name="InfoTip" Value="$(var.WmfInfoTip)"/>
+				<RegistryValue Type="string" Name="PreviewDetails" Value="$(var.WmfPreviewDetails)"/>
+				<RegistryValue Type="string" Name="FullDetails" Value="$(var.WmfFullDetails)"/>
+			</RegistryKey>
 						
 		</Component>
+
+		<Component Id="WMFNoIsolation" Directory="INSTALLDIR">
+			<Condition><![CDATA[$WMFThumbs = 3 OR (?WMFThumbs = 3 AND $WMFThumbs = -1)]]></Condition>
+			<RegistryValue Root="HKCR" Key="CLSID\$(var.CLSID_WmfThumbnailProvider)" Name="DisableProcessIsolation" Type="integer" Value="1"/>
+		</Component>
 		
-		<Feature Id="WMFThumbs" Absent="allow" AllowAdvertise="no" InstallDefault="local"
-				Level="2" Title="!(loc.WMFThumbs)" Description="!(loc.WMFThumbsDescr)">
+		<Feature Id="WMFThumbs" Absent="allow" AllowAdvertise="no" InstallDefault="local" Level="2"
+				Display="collapse" Title="!(loc.WMFThumbs)" Description="!(loc.WMFThumbsDescr)">
 			
 			<ComponentRef Id="WMFThumbs"/>
 			<ComponentGroupRef Id="WMFAllTypes"/>
 
 			<Condition Level="$(var.NoInstallLevel)"><![CDATA[Installed AND (NOT WMFTHUMBSIN)]]></Condition>
+
+			<Feature Id="WMFNoIsolation" Absent="allow" AllowAdvertise="no" InstallDefault="followParent"
+						Level="$(var.NoInstallLevel)" Title="!(loc.DisableProcessIsolation)" Description="!(loc.DisableProcessIsolationDescr)">
+				<ComponentRef Id="WMFNoIsolation"/>
+				<Condition Level="$(var.InstallLevel)"><![CDATA[Installed AND ?WMFNoIsolation = 3]]></Condition>
+			</Feature>
 			
 		</Feature>
 		
@@ -312,7 +329,7 @@
 
 
 	<Fragment>
-		<Component Id="SVGTypes" Directory="INSTALLDIR" Guid="$(var.SVGTypesGuid)">
+		<Component Id="SVGTypes" Directory="INSTALLDIR" Guid="$(var.SvgTypesGuid)">
 
 			<RegistryKey Root="HKLM" Key="$(var.RegPath_Setup)">
 				
@@ -331,11 +348,11 @@
 
 	<Fragment>
 		<ComponentGroup Id="WMFAllTypes" Directory="INSTALLDIR">
-			<Component Id="WMFTypes" Guid="$(var.WMFTypesGuid)">
+			<Component Id="WMFTypes" Guid="$(var.WmfTypesGuid)">
 
 				<RegistryKey Root="HKLM" Key="$(var.RegPath_Setup)">
 
-					<RegistryKey Key="Explorer\KindMap" ForceDeleteOnUninstall="yes">
+					<RegistryKey Key="Explorer\KindMap">
 						<RegistryValue Type="string" Name=".wmf" Value="picture"/>
 						<RegistryValue Type="string" Name=".emf" Value="picture"/>
 					</RegistryKey>

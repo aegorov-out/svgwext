@@ -153,14 +153,14 @@ INLINE void* dqmemzero(void* dst, size_t cdq)
 #define _zeroqb(dst, cb)		__stosq((unsigned long long*)(dst), 0, (size_t)(cb) / 8)
 
 
-INLINE void dmemcpy(void* dst, const void* src, size_t cd)
+INLINE void __fastcall dmemcpy(void* dst, const void* src, size_t cd)
 {
 	if (!(((unsigned char)cd | (unsigned char)(size_t)src | (unsigned char)(size_t)dst) & 7))
 		_movsq(dst, src, cd / 2);
 	else
 		_movsd(dst, src, cd);
 }
-INLINE void dmemzero(void* dst, size_t cd)
+INLINE void __fastcall dmemzero(void* dst, size_t cd)
 {
 	if (!(((unsigned char)cd | (unsigned char)(size_t)dst) & 7))
 		_zeroq(dst, cd / 2);
@@ -223,6 +223,42 @@ INLINE void dmemzero(void* dst, size_t cd)
 #define ZeroStructRange(obj, mfirst, mlast)	ZeroMemBlock(&((obj)->mfirst), SIZEOF_OBJECT_RANGE(obj, mfirst, mlast))
 // Excludes the last member
 #define ZeroStructRangeTo(obj, mfirst, mlast)	ZeroMemBlock(&((obj)->mfirst), SIZEOF_OBJECT_RANGE_TO(obj, mfirst, mlast))
+
+
+#ifdef __cplusplus
+template <class CT>
+inline CT* __fastcall xmemchr(const CT* px, CT x, size_t cx)
+{
+	for (; cx; --cx)
+	{
+		if (*((CT*)px) != x)
+		{
+			px = ((CT*)px) + 1;
+			continue;
+		}
+		return const_cast<CT*>(px);
+	}
+	return nullptr;
+}
+inline void* __fastcall dmemchr(const void* pd, unsigned __int32 d, size_t cd)
+{
+	return reinterpret_cast<void*>(CPP_COMMONS(xmemchr<unsigned __int32>(reinterpret_cast<const unsigned __int32*>(pd), d, cd)));
+}
+#else
+__inline void* __fastcall dmemchr(const void* pd, unsigned __int32 d, size_t cd)
+{
+	for (; cd; --cd)
+	{
+		if (*((unsigned __int32*)pd) != d)
+		{
+			pd = ((unsigned __int32*)pd) + 1;
+			continue;
+		}
+		return (void*)pd;
+	}
+	return NULL;
+}
+#endif
 
 
 #ifdef _malloc_z

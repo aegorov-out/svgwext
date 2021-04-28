@@ -8,9 +8,17 @@
 #ifndef PCH_H
 #define PCH_H
 
+#if defined(_DEBUG) && !defined(WCX_INCLUDE_TESTS)
+#define WCX_INCLUDE_TESTS
+#endif
+
+#ifndef WCXENTRY
 #define WCXENTRY		EXTERN_C __declspec(dllexport)
+#endif
+
 #include <SVGWCmn.h>
 #include <olectl.h>
 #include <thumbcache.h>
+#include <propkey.h>
 
 #endif //PCH_H

@@ -166,7 +166,7 @@ static HRESULT CALLBACK MatchesSvgPattern(_In_ IStream* pstm, UINT64, _Out_opt_ 
 		IStream* pstmInf;
 		ISAXXMLReader* reader;
 	};
-	HRESULT hr = wcUncompressStream(pstm, TRUE, &pstmInf);
+	HRESULT hr = wcTryUncompressStream(pstm, TRUE, &pstmInf);
 	if (pIsGzip)
 		*((bool_t*)pIsGzip) = (S_OK == hr);
 	if (S_OK == hr)

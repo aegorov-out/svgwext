@@ -10,9 +10,6 @@
 #ifndef WCX_SUPPORT_SELFREG
 #define WCX_SUPPORT_SELFREG
 #endif	// WCX_SUPPORT_SELFREG
-#ifndef WCX_INCLUDE_TESTS
-#define WCX_INCLUDE_TESTS
-#endif	// WCX_INCLUDE_TESTS
 #endif	// _DEBUG
 
 #pragma warning(disable: 26451 28159)
@@ -168,7 +165,8 @@ union UMETAHEADER {
 
 
 _Success_(return == S_OK) NOALIAS
-HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
+HRESULT InitLoadSvg(_In_ IStream* pstm, _COM_Outptr_opt_result_maybenull_ IStream** ppstmTemp,
+		_COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
 		_COM_Outptr_result_nullonfailure_ ID2D1SvgDocument** ppSvg, _Out_ D2D_SIZE_F* pSize);
 
 _Success_(return == S_OK) NOALIAS inline
@@ -179,15 +177,17 @@ HRESULT CreateSvgCpuReadBitmap(_In_ ID2D1DeviceContext5* d2dDC, _In_ ID2D1SvgDoc
 }
 
 _Success_(return == S_OK) NOALIAS
-HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
-		_COM_Outptr_result_nullonfailure_ ID2D1GdiMetafile** ppMetafile, _Out_ D2D_POINT_2F* pOrigin, _Out_ D2D_SIZE_F* pSize);
+HRESULT InitLoadWmf(_In_ IStream* pstm, _COM_Outptr_opt_result_maybenull_ IStream** ppstmTemp,
+		_COM_Outptr_result_nullonfailure_ ID2D1DeviceContext5** ppDC,
+		_COM_Outptr_result_nullonfailure_ ID2D1GdiMetafile1** ppMetafile,
+		_Out_ D2D_POINT_2F* pOrigin, _Out_ D2D_SIZE_F* pSize);
 
 _Success_(return == S_OK) NOALIAS inline
 HRESULT CreateWmfCpuReadBitmap(_In_ ID2D1DeviceContext5* d2dDC, _In_ ID2D1GdiMetafile* metafile, D2D_SIZE_U size,
 		_In_opt_ const D2D1_POINT_2F& ptOrigin, _In_ const D2D1_MATRIX_3X2_F& transform,
 		_COM_Outptr_result_nullonfailure_ ID2D1Bitmap1** ppbm)
 {
-	const D2D1_POINT_2F ptOffset = { -(ptOrigin.x), -(ptOrigin.y) };
+	const D2D1_POINT_2F ptOffset = { IsZero(ptOrigin.x) ? 0 : -(ptOrigin.x), IsZero(ptOrigin.y) ? 0 : -(ptOrigin.y) };
 	return ::wcWmfToCpuBitmap(d2dDC, metafile, size, &ptOffset, &transform, ppbm);
 }
 

@@ -32,13 +32,33 @@ ULONG DecoderBase::Release()
 }
 
 
+
+HRESULT DecoderBase::Initialize(__RPC__in_opt IStream* pIStream, WICDecodeOptions)
+{
+	HRESULT hr = E_INVALIDARG;
+	if (pIStream)
+	{
+		EnterCS();
+		hr = WINCODEC_ERR_WRONGSTATE;
+		if (IsClear()) __try
+		{
+			hr = DoLoad(pIStream);
+		}
+		__finally
+		{
+			LeaveCS();
+		}
+	}
+	return hr;
+}
+
+
 HRESULT DecoderBase::GetMetadataQueryReader(__RPC__deref_out_opt IWICMetadataQueryReader** ppIMetadataQueryReader)
 {
 	if (ppIMetadataQueryReader)
 		*ppIMetadataQueryReader = nullptr;
 	return WINCODEC_ERR_UNSUPPORTEDOPERATION;
 }
-
 
 
 HRESULT DecoderBase::GetPreview(__RPC__deref_out_opt IWICBitmapSource** ppIBitmapSource)
@@ -59,7 +79,6 @@ HRESULT DecoderBase::GetColorContexts(UINT cCount,
 		*ppIColorContexts = nullptr;
 	return WINCODEC_ERR_UNSUPPORTEDOPERATION;
 }
-
 
 
 HRESULT DecoderBase::GetFrameCount(__RPC__out UINT* pCount)
@@ -235,17 +254,40 @@ HRESULT DecoderBase::CreateThumbnail(D2D_SIZE_F size, _In_ const D2D1_MATRIX_3X2
 }
 
 
+HRESULT DecoderBase::DoLoad(_In_ IStream* pstm)
+{
+	ASSERT(IsClear());
+	HRESULT hr = InitLoad(pstm);
+	if (S_OK == hr)
+		m_screenDpi = GetScreenDpi();
+	else if (AnyTrue(SUCCEEDED(hr), E_FAIL == hr))
+		hr = WINCODEC_ERR_UNKNOWNIMAGEFORMAT;
+	return hr;
+}
+
 HRESULT DecoderBase::Reload(HRESULT hrRecreate)
 {
 	Clear();
+	if (m_pstmInit)
+	{
+		hrRecreate = Stream_SeekStart(m_pstmInit);
+		if (SUCCEEDED(hrRecreate))
+		{
+			hrRecreate = DoLoad(m_pstmInit);
+			if (S_OK == hrRecreate)
+				return S_OK;
+		}
+		SafeRelease(&m_pstmInit);
+	}
 	return hrRecreate;
 }
 
 void DecoderBase::Clear()
 {
 	Zero8Bytes(&m_sizeDips);
-	//SafeRelease(&m_wicBitmap);
+	SafeRelease(&m_wicBitmap);
 	SafeRelease(&m_d2dDC);
+	SafeRelease(&m_pstmInit);
 }
 
 

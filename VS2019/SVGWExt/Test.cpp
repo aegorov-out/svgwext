@@ -4,366 +4,16 @@
 #include "SVGDecoder.h"
 #include "WMFDecoder.h"
 
+
 namespace RootNamespace {
 
-#ifdef WCX_ENABLE_LOG
-///////////////////////////////////////////////////////////////////////
-// Log ////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-#include <stdio.h>
-
-#define LOG_SHORT_FILE_NAME	L"SVGWExt.log"
-#define LOG_FILE_NAME		LOG_SHORT_FILE_NAME
-
-static FILE* g_logFile = nullptr;
-static CRITICAL_SECTION g_logCS;
-
-
-bool IsDllLogging()
-{
-	return ToBool(g_logFile);
-}
-
-
-#ifdef WCX_LOG_APPEND
-#define fsopenMode	L"at"
-static bool __fastcall IsLogFileValid(_In_ PCWSTR szFileName)
-{
-	const DWORD attr = ::GetFileAttributesW(szFileName);
-	return AnyTrue(INVALID_FILE_ATTRIBUTES == attr, !(attr & FILE_ATTRIBUTE_DIRECTORY));
-}
-#else
-#define fsopenMode	L"wt"
-static bool __fastcall IsLogFileValid(_In_ PCWSTR szFileName)
-{
-	return (INVALID_FILE_ATTRIBUTES == ::GetFileAttributesW(szFileName));
-}
-#endif
-
-NOINLINE HRESULT __fastcall wcLogCreate(_In_opt_ PCWSTR szFileName)
-{
-	HRESULT hr = S_OK;
-	UINT clen;
-	union {
-		WCHAR wczFName[SAFE_PATH];
-		CHAR czModule[sizeof(wczFName)];
-		SYSTEMTIME st;
-	};
-
-	wcInitCommonCS(&g_logCS);
-	::EnterCriticalSection(&g_logCS);
-
-	if (!(szFileName && szFileName[0]))
-	{
-		PWSTR pwzFolder;
-		hr = ::SHGetKnownFolderPath(FOLDERID_Desktop, KF_FLAG_CREATE|KF_FLAG_INIT|KF_FLAG_NO_ALIAS, NULL, &pwzFolder);
-		if (S_OK != hr)
-			goto Leave_;
-		//WCX_LOG_APPEND
-		if (!::PathCombineW(wczFName, pwzFolder, LOG_FILE_NAME) || !IsLogFileValid(wczFName))
-		{
-			if (!::PathMakeUniqueName(wczFName, _countof(wczFName), LOG_SHORT_FILE_NAME, LOG_FILE_NAME, pwzFolder))
-			{
-				hr = HRESULT_WIN_ERROR;
-				ASSUME(FAILED(hr));
-			}
-		}
-		::CoTaskMemFree(pwzFolder);
-		if (S_OK != hr)
-			goto Leave_;
-		szFileName = wczFName;
-	}
-	else
-	{
-		hr = ::SHPathPrepareForWriteW(NULL, nullptr, szFileName, SHPPFW_DIRCREATE|SHPPFW_IGNOREFILENAME);
-		if (FAILED(hr))
-			goto Leave_;
-	}
-
-	g_logFile = _wfsopen(szFileName, fsopenMode, SH_DENYWR);
-	if (!g_logFile)
-	{
-		hr = HRESULT_WIN_ERROR;
-		goto Leave_;
-	}
-	fputs("\r\n", g_logFile);
-	clen = ::GetModuleFileNameA(g_hModule, czModule, _countof(czModule));
-	if (clen && clen < _countof(czModule))
-		fwrite(czModule, sizeof(czModule[0]), clen, g_logFile);
-	::GetLocalTime(&st);
-	if (fprintf(g_logFile, "\r\n------- %.2u:%.2u:%.2u ---------------\r\n",
-		(UINT)st.wHour, (UINT)st.wMinute, (UINT)st.wSecond) > 0)
-	{
-		fflush(g_logFile);
-		hr = S_OK;
-	}
-
-Leave_:
-	::LeaveCriticalSection(&g_logCS);
-	return hr;
-}
-
-WCXFASTAPI wcLogOpen(_In_opt_ PCWSTR szFileName)
-{
-	if (g_logFile)
-		return S_FALSE;
-
-	const BOOL inCS = TryEnterGlobalCS();
-	const HRESULT hr = wcLogCreate(szFileName);
-	if (inCS)
-		LeaveGlobalCS();
-	return hr;
-}
-
-
-static HRESULT __fastcall LogWriteTime_(_In_ const SYSTEMTIME& st)
-{
-	return (fprintf(g_logFile, "[%.2u:%.2u:%.2u]  ", (UINT)st.wHour, (UINT)st.wMinute, (UINT)st.wSecond) > 0)
-			? S_OK : HRESULT_WIN_ERROR;
-}
-
-static NOINLINE HRESULT LogWriteTime_()
-{
-	SYSTEMTIME st;
-	::GetLocalTime(&st);
-	return LogWriteTime_(st);
-}
-
-template <class _TC>
-static HRESULT __fastcall LogPreWrite_(_Inout_ const _TC** pszText, bool line)
-{
-	HRESULT hr = wcLogOpen(nullptr);
-	if (SUCCEEDED(hr))
-	{
-		_TC ch = (*pszText)[0];
-		if ('!' == ch)
-		{
-			(*pszText)++;
-			ch = (*pszText)[0];
-			line = false;
-		}
-		else if ('@' == ch)
-			line = true;
-		
-		::EnterCriticalSection(&g_logCS);
-		if ('@' == ch)
-		{
-			(*pszText)++;
-			ch = (*pszText)[0];
-		}
-		if (line)
-		{
-			hr = LogWriteTime_();
-			if (FAILED(hr))
-			{
-				::LeaveCriticalSection(&g_logCS);
-				return hr;
-			}
-		}
-		hr = S_OK;
-		if (0 == ch)
-		{
-			::LeaveCriticalSection(&g_logCS);
-			hr = S_FALSE;
-		}
-	}
-	WARNING_SUPPRESS(26115)
-	return hr;
-}
-
-static HRESULT __fastcall LogPreWrite(_Inout_ PCSTR* pszText, bool line)
-{
-	return LogPreWrite_(pszText, line);
-}
-
-static HRESULT __fastcall LogPreWrite(_Inout_ PCWSTR* pszText, bool line)
-{
-	return LogPreWrite_(pszText, line);
-}
-
-
-WCXFASTAPI wcLogWrite(_In_opt_ PCSTR szText)
-{
-	HRESULT hr = LogPreWrite(&szText, false);
-	if (S_OK == hr) __try
-	{
-		if (fputs(szText, g_logFile) < 0)
-			hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-WCXFASTAPI wcLogWriteW(_In_opt_ PCWSTR szText)
-{
-	HRESULT hr = LogPreWrite(&szText, false);
-	if (S_OK == hr) __try
-	{
-		if (fputws(szText, g_logFile) < 0)
-			hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-
-WCXFASTAPI wcLogWriteLn(_In_opt_ PCSTR szText)
-{
-	HRESULT hr = LogPreWrite(&szText, true);
-	if (S_OK == hr) __try
-	{
-		if (fputs(szText, g_logFile) >= 0 && fputs("\r\n", g_logFile) >= 0)
-		{
-			fflush(g_logFile);
-			ASSUME(S_OK == hr);
-		}
-		else hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-WCXFASTAPI wcLogWriteLnW(_In_opt_ PCWSTR szText)
-{
-	HRESULT hr = LogPreWrite(&szText, true);
-	if (S_OK == hr) __try
-	{
-		if (fputws(szText, g_logFile) >= 0 && fputs("\r\n", g_logFile) >= 0)
-		{
-			fflush(g_logFile);
-			ASSUME(S_OK == hr);
-		}
-		else hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-
-WCXCAPI wcLogFormat(_In_opt_ PCSTR szFmt, ...)
-{
-	va_list Args;
-	va_start(Args, szFmt);
-	const HRESULT hr = wcLogFormatV(szFmt, Args);
-	va_end(Args);
-	return hr;
-}
-
-WCXFASTAPI wcLogFormatV(_In_opt_ PCSTR szFmt, va_list Args)
-{
-	HRESULT hr = LogPreWrite(&szFmt, false);
-	if (S_OK == hr) __try
-	{
-		if (vfprintf(g_logFile, szFmt, Args) < 0)
-			hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-
-WCXCAPI wcLogFormatLn(_In_opt_ PCSTR szFmt, ...)
-{
-	va_list Args;
-	va_start(Args, szFmt);
-	const HRESULT hr = wcLogFormatLnV(szFmt, Args);
-	va_end(Args);
-	return hr;
-}
-
-WCXFASTAPI wcLogFormatLnV(_In_opt_ PCSTR szFmt, va_list Args)
-{
-	HRESULT hr = LogPreWrite(&szFmt, true);
-	if (S_OK == hr) __try
-	{
-		if (vfprintf(g_logFile, szFmt, Args) >= 0 && fputs("\r\n", g_logFile) >= 0)
-		{
-			fflush(g_logFile);
-			ASSUME(S_OK == hr);
-		}
-		else hr = HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-	}
-	return hr;
-}
-
-
-static HRESULT __fastcall LogWriteStreamInfo_(_In_opt_ IStream* pstm)
-{
-	HRESULT hr = S_FALSE;
-	if (pstm)
-	{
-		STATSTG stat = { nullptr };
-		hr = pstm->Stat(&stat, STATFLAG_DEFAULT);
-		if (SUCCEEDED(hr))
-		{
-			const UINT64 cbSize = ToUInt64(stat.cbSize);
-			SYSTEMTIME st = { 0 };
-			::FileTimeToSystemTime(&stat.mtime, &st);
-			hr = (fprintf(g_logFile, "'%S' (%.2f KB, %u bytes; %.4u-%.2u-%.2u %.2u:%.2u:%.2u) ",
-				stat.pwcsName, (float)(cbSize / 1024.), (UINT)cbSize,
-				(UINT)st.wYear, (UINT)st.wMonth, (UINT)st.wDay,
-				(UINT)st.wHour, (UINT)st.wMinute, (UINT)st.wSecond) >= 0)
-				? S_OK : HRESULT_WIN_ERROR;
-			::CoTaskMemFree(stat.pwcsName);
-		}
-	}
-	return hr;
-}
-
-WCXCAPI wcLogFormatStat(_In_opt_ IStream* pstm, _In_opt_ PCSTR szFmt, ...)
-{
-	va_list Args;
-	va_start(Args, szFmt);
-	HRESULT hr = LogPreWrite(&szFmt, false);
-	if (S_OK == hr) __try
-	{
-		hr = LogWriteStreamInfo_(pstm);
-		if (SUCCEEDED(hr))
-			hr = (vfprintf(g_logFile, szFmt, Args) >= 0) ? S_OK : HRESULT_WIN_ERROR;
-	}
-	__finally {
-		::LeaveCriticalSection(&g_logCS);
-		va_end(Args);
-	}
-	return hr;
-}
-
-void wcLogClose()
-{
-	if (g_logFile)
-	{
-		::EnterCriticalSection(&g_logCS);
-		if (g_logFile)
-		{
-			fflush(g_logFile);
-			fclose(g_logFile);
-		}
-		::LeaveCriticalSection(&g_logCS);
-		::DeleteCriticalSection(&g_logCS);
-	}
-}
-
-
-#endif	// WCX_ENABLE_LOG
-
-
 #ifdef WCX_INCLUDE_TESTS
+
+#include <propvarutil.h>
+#pragma comment(lib, "propsys.lib")
+
 ///////////////////////////////////////////////////////////////////////
 // Tests //////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
 
 
 static HRESULT TestUngzipStream(_In_ PCWSTR szFileName, bool isSvg, IStream** ppstm)
@@ -376,7 +26,7 @@ static HRESULT TestUngzipStream(_In_ PCWSTR szFileName, bool isSvg, IStream** pp
 	hr = wcCreateStreamOnFile(szFileName, FALSE, &pstmIn);
 	if (S_OK == hr)
 	{
-		hr = wcUncompressStream(pstmIn, FALSE, ppstm);
+		hr = wcTryUncompressStream(pstmIn, FALSE, ppstm);
 		pstmIn->Release();
 	}
 	return hr;
@@ -392,7 +42,7 @@ static HRESULT TestUngzipToFile(_In_ PCWSTR szFileName, bool isSvg, _In_ PCWSTR 
 			LARGE_INTEGER liPos;
 			ULARGE_INTEGER uliSize;
 		};
-		hr = pstmIn->Seek({ 0 }, STREAM_SEEK_SET, nullptr);
+		hr = Stream_SeekStart(pstmIn);
 		if (SUCCEEDED(hr))
 		{
 			IStream* pstmOut;
@@ -416,11 +66,83 @@ static HRESULT TestUngzipToFile(_In_ PCWSTR szFileName, bool isSvg, _In_ PCWSTR 
 }
 
 
+static HRESULT TestPropStore(_In_ IShellItem2* psi, bool isSvg, _Outptr_opt_result_maybenull_ PWSTR* ppOut)
+{
+	if (ppOut)
+		*ppOut = nullptr;
+
+	IPropertyStore* props;
+	HRESULT hr = psi->BindToHandler(NULL, BHID_PropertyStore, IID_IPropertyStore, PPV_ARG(&props));
+	if (S_OK == hr)
+	{
+		DWORD count = 0, i;
+		hr = props->GetCount(&count);
+		TRACEW2(L">>>> %u properties found (0x%X)...\n", count, hr);
+		if (SUCCEEDED(hr))
+		{
+			PROPERTYKEY key;
+			PROPVARIANT val;
+			PWSTR szVal;
+			for (i = 0; i < count; i++)
+			{
+				hr = props->GetAt(i, &key);
+				if (S_OK == hr)
+				{
+					ZeroStruct(&val);
+					hr = props->GetValue(key, &val);
+					if (SUCCEEDED(hr))
+					{
+						if (VT_EMPTY != val.vt && VT_NULL != val.vt)
+						{
+							hr = ::PropVariantToStringAlloc(val, &szVal);
+							if (S_OK == hr)
+							{
+								TRACEW2(L"%u)\t'%ls'\n", i + 1, szVal);
+								::CoTaskMemFree(szVal);
+							}
+							::PropVariantClear(&val);
+						}
+						else
+						{
+							TRACEW1(L"%u)\t[Empty]\n", i + 1);
+							hr = S_OK;
+						}
+					}
+				}
+				if (S_OK != hr)
+					TRACEW2(L"%u)\t[E0x%X]\n", i + 1, hr);
+			}
+			TRACEW1(L"<<<< end of properties (0x%X)...\n", hr);
+		}
+		props->Release();
+	}
+	else if (E_NOTIMPL == hr)
+		hr = __HRESULT_FROM_WIN32(ERROR_CALL_NOT_IMPLEMENTED);
+	return hr;
+}
+
+static HRESULT TestPropStore(_In_ PCWSTR szFileName, bool isSvg, _Outptr_opt_result_maybenull_ PWSTR* ppOut)
+{
+	IShellItem2* psi;
+	HRESULT hr = ::SHCreateItemFromParsingName(szFileName, nullptr, IID_IShellItem2, PPV_ARG(&psi));
+	if (S_OK == hr)
+	{
+		hr = TestPropStore(psi, isSvg, ppOut);
+		psi->Release();
+	}
+	else if (ppOut)
+		*ppOut = nullptr;
+	return hr;
+}
+
 static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBitmap, WTS_ALPHATYPE* pwAlpha)
 {
 	HRESULT hr = E_INVALIDARG;
 	if (!IS_INTRESOURCE(phBitmap))
 	{
+		IThumbnailProvider* thumbs;
+
+	#ifdef INTERNAL_THUMB_TEST
 		IInitializeWithFile* init;
 		hr = (isSvg ? wcCreateSvgThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init))
 				: wcCreateWmfEmfThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init)));
@@ -429,18 +151,38 @@ static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBi
 			hr = init->Initialize(szFileName, STGM_READ);
 			if (S_OK == hr)
 			{
-				IThumbnailProvider* thumbs;
 				hr = init->QueryInterface(IID_IThumbnailProvider, PPV_ARG(&thumbs));
 				if (S_OK == hr)
 				{
+					
 					hr = thumbs->GetThumbnail(256, phBitmap, pwAlpha);
 					thumbs->Release();
 				}
 			}
 			init->Release();
 		}
+	#else	// INTERNAL_THUMB_TEST
+		IShellItem2* psi;
+		hr = ::SHCreateItemFromParsingName(szFileName, nullptr, IID_IShellItem2, PPV_ARG(&psi));
+		if (S_OK == hr)
+		{
+			//BHID_PropertyStore
+			hr = psi->BindToHandler(NULL, BHID_ThumbnailHandler, IID_IThumbnailProvider, PPV_ARG(&thumbs));
+			if (S_OK == hr)
+			{
+				hr = thumbs->GetThumbnail(96, phBitmap, pwAlpha);
+				thumbs->Release();
+			}
+			else if (E_NOTIMPL == hr)
+				hr = __HRESULT_FROM_WIN32(ERROR_CALL_NOT_IMPLEMENTED);
+			psi->Release();
+		}
+	#endif
 		if (S_OK != hr)
+		{
+			*pwAlpha = WTSAT_UNKNOWN;
 			*phBitmap = NULL;
+		}
 	}
 	return hr;
 }
@@ -448,32 +190,8 @@ static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBi
 
 static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBitmap)
 {
-	HRESULT hr = E_INVALIDARG;
-	if (!IS_INTRESOURCE(phBitmap))
-	{
-		IInitializeWithFile* init;
-		hr = (isSvg ? wcCreateSvgThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init))
-				: wcCreateWmfEmfThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init)));
-		if (S_OK == hr)
-		{
-			hr = init->Initialize(szFileName, STGM_READ);
-			if (S_OK == hr)
-			{
-				IThumbnailProvider* thumbs;
-				hr = init->QueryInterface(IID_IThumbnailProvider, PPV_ARG(&thumbs));
-				if (S_OK == hr)
-				{
-					WTS_ALPHATYPE wAlpha;
-					hr = thumbs->GetThumbnail(256, phBitmap, &wAlpha);
-					thumbs->Release();
-				}
-			}
-			init->Release();
-		}
-		if (S_OK != hr)
-			*phBitmap = NULL;
-	}
-	return hr;
+	WTS_ALPHATYPE wAlpha;
+	return TestThumbBitmap(szFileName, isSvg, phBitmap, &wAlpha);
 }
 
 
@@ -672,7 +390,7 @@ WCXSTDAPI wcRunDllTest(_In_opt_ HWND hWnd, UINT idMsg, _In_opt_ PCWSTR szCmdLine
 		if (szExt && szExt[0])
 		{
 			szExt += (L'.' == szExt[0]);
-			isSvg = (0 == lstrcmpiW(szExt, L"svg") || 0 == lstrcmpiW(szExt, L"svgz") || 0 == lstrcmpiW(szExt, L"xml"));
+			isSvg = (0 == _wcsicmp(szExt, L"svg") || 0 == _wcsicmp(szExt, L"svgz") || 0 == _wcsicmp(szExt, L"xml"));
 
 			switch (idMsg)
 			{
@@ -691,13 +409,16 @@ WCXSTDAPI wcRunDllTest(_In_opt_ HWND hWnd, UINT idMsg, _In_opt_ PCWSTR szCmdLine
 			case DLLT_WICDECODER:
 				hr = TestWicDecoder(szCmdLine, isSvg, (IWICBitmapDecoder**)lParam);
 				break;
+			case DLLT_PROPERTY_STORE:
+				hr = TestPropStore(szCmdLine, isSvg, (PWSTR*)lParam);
+				break;
 			case DLLT_UNGZIP_STREAM:
 				hr = TestUngzipStream(szCmdLine, isSvg, (IStream**)lParam);
 				break;
 			case DLLT_UNGZIP_FILE:
 				hr = (IS_INTRESOURCE(lParam) ? E_INVALIDARG : TestUngzipToFile(szCmdLine, isSvg, (PCWSTR)lParam));
 				break;
-			case DLLT_NULL:
+			default:
 				hr = E_NOTIMPL;
 				break;
 			}

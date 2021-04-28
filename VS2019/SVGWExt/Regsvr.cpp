@@ -57,7 +57,9 @@ constexpr DWORD REGSAM_WRITE = KEY_WRITE;
 constexpr DWORD REGSAM_CREATE_SUBKEY = (KEY_WRITE & ~KEY_SET_VALUE);
 constexpr DWORD REGSAM_SET_VALUE = (KEY_WRITE & ~KEY_CREATE_SUB_KEY);
 
-#ifndef _DEBUG
+#define MAX_VALUE_NAME	64
+
+#ifndef WCX_SELFREG_TEST
 
 #define REGKEY_OPTION		0
 #define HK_CLASSES_ROOT		HKEY_CLASSES_ROOT
@@ -66,7 +68,7 @@ constexpr DWORD REGSAM_SET_VALUE = (KEY_WRITE & ~KEY_CREATE_SUB_KEY);
 #define OpenRootKeys()		S_OK
 #define CloseRootKeys()		((void)0)
 
-#else	// _DEBUG
+#else	// WCX_SELFREG_TEST
 
 static HKEY g_hkCR = NULL, g_hkLM = NULL;
 
@@ -74,7 +76,7 @@ static HKEY g_hkCR = NULL, g_hkLM = NULL;
 #define HK_CLASSES_ROOT		g_hkCR
 #define HK_LOCAL_MACHINE	g_hkLM
 
-#define REGPATH_APP_			L"SOFTWARE\\AE_\\SVGWExt\\"
+#define REGPATH_APP_			L"SOFTWARE\\AESW\\SVGWExt\\"
 #define REGPATH_CLASSES_ROOT	REGPATH_APP_ L"HKCR"
 #define REGPATH_LOCAL_MACHINE	REGPATH_APP_ L"HKLM"
 
@@ -108,7 +110,7 @@ static void CloseRootKeys()
 	SafeRegCloseKey(&g_hkCR);
 }
 
-#endif	// _DEBUG
+#endif	// WCX_SELFREG_TEST
 
 
 static NOALIAS UINT8 __fastcall ReadCompArg(_In_opt_ PCWSTR szArg)
@@ -121,13 +123,13 @@ static NOALIAS UINT8 __fastcall ReadCompArg(_In_opt_ PCWSTR szArg)
 			szArg = szSwitch;
 		if (wcAsciiIsAnyEqual(szArg, 2, "svg", "svgall"))
 			comp = (UINT8)ServComp::SvgThumbProvider | (UINT8)ServComp::SvgDecoder;
-		else if (wcAsciiIsAnyEqual(szArg, 2, "svgt", "svgthumb"))
+		else if (wcAsciiIsAnyEqual(szArg, 3, "svgt", "svgx", "svgthumb"))
 			comp = (UINT8)ServComp::SvgThumbProvider;
 		else if (wcAsciiIsAnyEqual(szArg, 3, "svgd", "svgdec", "svgwic"))
 			comp = (UINT8)ServComp::SvgDecoder;
 		else if (wcAsciiIsAnyEqual(szArg, 3, "wmf", "wmfemf", "wmfall"))
 			comp = (UINT8)ServComp::WmfThumbProvider | (UINT8)ServComp::WmfDecoder;
-		else if (wcAsciiIsAnyEqual(szArg, 2, "wmft", "wmfthumb"))
+		else if (wcAsciiIsAnyEqual(szArg, 3, "wmft", "wmfx", "wmfthumb"))
 			comp = (UINT8)ServComp::WmfThumbProvider;
 		else if (wcAsciiIsAnyEqual(szArg, 3, "wmfd", "wmfdec", "wmfwic"))
 			comp = (UINT8)ServComp::WmfDecoder;
@@ -141,6 +143,30 @@ static NOALIAS UINT8 __fastcall ReadCompArg(_In_opt_ PCWSTR szArg)
 ///////////////////////////////////////////////////////////////////////
 // Actual registration ////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
+
+
+#define PROPLIST_COUNT	4	// ExtendedTileInfo, InfoTip, PreviewDetails, FullDetails
+
+
+#define SVG_ExtendedTileInfo	"prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size"
+#define SVG_InfoTip				"prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"
+#define SVG_PreviewDetails		"prop:*System.Kind;*System.Title;*System.Comment;*System.Author;*System.Image.Dimensions;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"
+#define SVG_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;System.Title;System.Comment;*System.Author;System.Rating;System.Image.Dimensions;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
+
+#define WMF_ExtendedTileInfo	"prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size"
+#define WMF_InfoTip				"prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"
+#define WMF_PreviewDetails		"prop:*System.Kind;*System.Author;*System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"
+#define WMF_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;*System.Author;System.Rating;System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
+
+static const PCSTR g_rgszPropListNames[PROPLIST_COUNT] {
+	"ExtendedTileInfo", "InfoTip", "PreviewDetails", "FullDetails"
+};
+static const PCSTR g_rgszSvgPropList[PROPLIST_COUNT] {
+	SVG_ExtendedTileInfo, SVG_InfoTip, SVG_PreviewDetails, SVG_FullDetails
+};
+static const PCSTR g_rgszWmfPropList[PROPLIST_COUNT] {
+	WMF_ExtendedTileInfo, WMF_InfoTip, WMF_PreviewDetails, WMF_FullDetails
+};
 
 
 #pragma warning(disable: 26495)
@@ -206,9 +232,11 @@ class RegSvr : public Uncopyable_
 
 	HRESULT RegisterSvgThumbs();
 	HRESULT RegisterWmfThumbs();
-	HRESULT RegisterThumbExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option = false);
-	HRESULT WriteThumbExt(_In_ HKEY hkRoot, _In_ PCWSTR szDotExt,
-		_In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option = false) const;
+	HRESULT RegisterShellExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid,
+			_In_reads_(PROPLIST_COUNT) const PCSTR* rgszList, bool option = false);
+	HRESULT WriteThumbExt(_In_ HKEY hKey, _In_ PCWSTR szDotExt,
+		_In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option = false);
+	HRESULT WritePropLists(_In_ HKEY hKey, _In_ PCWSTR szDotExt, _In_reads_(PROPLIST_COUNT) const PCSTR* rgszList, bool option = false) const;
 
 	HRESULT RegisterSvgDecoder();
 	HRESULT RegisterWmfDecoder();
@@ -218,25 +246,30 @@ class RegSvr : public Uncopyable_
 	void RegisterSvgTypes();
 	void RegisterWmfTypes();
 	HRESULT RegisterPictureType(_In_ PCWSTR szDotExt,
-		_In_reads_(cchContType + 1) PCWSTR szContentType, UINT cchContType, UINT iconId);
+		_In_reads_(cchContType + 1) PCWSTR szContentType, UINT cchContType,
+		UINT iconId, _In_reads_(PROPLIST_COUNT) const PCSTR* rgszList);
 	HRESULT WritePictureType(_In_ PCWSTR szDotExt, _In_reads_(cchContType + 1) PCWSTR szContentType, UINT cchContType, bool option = false);
-	_Success_(return == S_OK) HRESULT OpenSetupKey(_In_ PCWSTR szSubkey, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated = nullptr);
+
+	_Success_(return == S_OK)
+	HRESULT OpenSetupKey(_In_ PCWSTR szSubkey, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated = nullptr);
 	bool ValueContainsModule(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szValName) const;
 	bool ValueContainsModule(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szValName, _In_ PCWSTR szModuleName) const;
 
 	HRESULT SetDecoderInfoValues(_Inout_updates_(cSpecValues + CODEC_COMMON_ENTRIES) UValData* rgValues, UINT cSpecValues);
 
-
-	static constexpr auto CODEC_COMMON_ENTRIES = 5u;	// VendorGUID, Author, SupportAnimation, SupportChromaKey, SupportMultiframe
+	// VendorGUID, Author, SupportAnimation, SupportChromaKey, SupportMultiframe
+	static constexpr auto CODEC_COMMON_ENTRIES = 5u;
 
 	static NOALIAS _Translates_Win32_to_HRESULT_(lstat) HRESULT __fastcall ToHRESULT(LSTATUS lstat);
+	static NOALIAS _Translates_Win32_to_HRESULT_(lstat) HRESULT __fastcall ToDelHRESULT(LSTATUS lstat);
 
 	_Success_(return == S_OK) HRESULT OpenKey(_In_ HKEY hkRoot, _In_ PCWSTR szSubkey,
 		REGSAM regSam, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated = nullptr) const;
 	static NOALIAS _Success_(return == S_OK) HRESULT CreateKey(_In_ HKEY hkRoot, _In_ PCWSTR szSubkey,
 		REGSAM regSam, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated = nullptr);
-	static NOALIAS HRESULT DeleteKey(_In_ HKEY hkRoot, _In_opt_ PCWSTR szSubkey);
-	static NOALIAS BOOL StringValueExists(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szName);
+	static NOALIAS HRESULT DeleteKey(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey);
+	static NOALIAS HRESULT DeleteValue(_In_ HKEY hKey, _In_opt_ PCWSTR szName);
+	static NOALIAS bool StringValueExists(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szName);
 	static NOALIAS HRESULT SetKeyValue(_In_ HKEY hKey, _In_opt_ PCWSTR szSubKey, _In_opt_ PCWSTR szValueName,
 		_In_reads_(cchVal + 1) PCWSTR szValue, UINT cchVal, bool option = false);
 	static NOALIAS HRESULT SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName,
@@ -246,6 +279,8 @@ class RegSvr : public Uncopyable_
 	static NOALIAS HRESULT SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName,
 		_In_reads_(cchVal + 1) PCWSTR szValue, UINT cchVal);
 	static NOALIAS HRESULT SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName, _In_ PCSTR szValue);
+	static NOALIAS HRESULT SetValue(_In_ HKEY hKey, _In_opt_ PCWSTR szName, _In_ PCSTR szValue);
+	static HRESULT SetValue(_In_ HKEY hKey, _In_ PCSTR szValue) { return SetValue(hKey, (PCWSTR)nullptr, szValue); }
 	static NOALIAS HRESULT SetValue(_In_ HKEY hKey, const UValData& Value);
 	static NOALIAS HRESULT SetValues(_In_ HKEY hKey, _In_reads_(cValues) PCUValData rgValues, UINT cValues);
 
@@ -339,7 +374,6 @@ HRESULT RegSvr::RegisterServer(_In_ REFCLSID rClsid, _In_ PCSTR szThreadModel, _
 	CloseClassKey();
 
 	HRESULT hr = SELFREG_E_CLASS;
-	UINT cchKey;
 	HKEY hkCls, hKey;
 	union {
 		UINT64 key64[2];
@@ -350,9 +384,8 @@ HRESULT RegSvr::RegisterServer(_In_ REFCLSID rClsid, _In_ PCSTR szThreadModel, _
 	key64[1] = MAKEDWORD(L'D', L'\\');
 	PWSTR pszClsid = wcKey + 6;
 
-	cchKey = (UINT)::StringFromGUID2(rClsid, pszClsid, _countof(wcKey) - 6);
 	ASSUME(SELFREG_E_CLASS == hr);
-	if ((int)cchKey > 0)
+	if (::StringFromGUID2(rClsid, pszClsid, _countof(wcKey) - 6) > 0)
 	{
 		if (IsInstall())	// register server
 		{
@@ -360,7 +393,12 @@ HRESULT RegSvr::RegisterServer(_In_ REFCLSID rClsid, _In_ PCSTR szThreadModel, _
 			if (S_OK == hr)
 			{
 				m_hkClass = hkCls;
-				SetValue(hkCls, nullptr, szName);
+				SetValue(hkCls, szName);
+				/*if (!isDecoder)
+				{
+					const DWORD dval = 1;
+					SetValue(hkCls, "DisableProcessIsolation", REG_DWORD, &dval, sizeof(dval));
+				}*/
 				hr = CreateKey(hkCls, L"InprocServer32", REGSAM_SET_VALUE, &hKey);
 				if (S_OK == hr)
 				{
@@ -445,15 +483,15 @@ HRESULT RegSvr::RegisterSvgThumbs()
 	if (SUCCEEDED(hr))
 	{
 		WCHAR wcClsid[MAX_GUID_STRSIZE];
-		int cch = StringFromGUID2(CLSID_SvgThumbnailProvider, wcClsid, _countof(wcClsid));
+		int cch = ::StringFromGUID2(CLSID_SvgThumbnailProvider, wcClsid, _countof(wcClsid));
 		hr = SELFREG_E_CLASS;
 		if (cch > 0)
 		{
 			--cch;
-			hr = RegisterThumbExt(L".svg", wcClsid, (UINT)cch);
+			hr = RegisterShellExt(L".svg", wcClsid, (UINT)cch, g_rgszSvgPropList);
 			if (SUCCEEDED(hr))
 			{
-				hr = RegisterThumbExt(L".svgz", wcClsid, (UINT)cch);
+				hr = RegisterShellExt(L".svgz", wcClsid, (UINT)cch, g_rgszSvgPropList);
 				if (SUCCEEDED(hr))
 					hr = S_OK;
 			}
@@ -461,6 +499,14 @@ HRESULT RegSvr::RegisterSvgThumbs()
 	}
 	return hr;
 }
+/*
+	if (SUCCEEDED(WritePropLists(L".emf", g_rgszWmfPropList)))
+	{
+		WritePropLists(L".emz", g_rgszWmfPropList, true);
+		if (SUCCEEDED(WritePropLists(L".wmf", g_rgszWmfPropList)))
+			WritePropLists(L".wmz", g_rgszWmfPropList, true);
+	}
+*/
 
 
 HRESULT RegSvr::RegisterWmfThumbs()
@@ -469,19 +515,19 @@ HRESULT RegSvr::RegisterWmfThumbs()
 	if (SUCCEEDED(hr))
 	{
 		WCHAR wcClsid[MAX_GUID_STRSIZE];
-		int cch = StringFromGUID2(CLSID_WmfEmfThumbnailProvider, wcClsid, _countof(wcClsid));
+		int cch = ::StringFromGUID2(CLSID_WmfEmfThumbnailProvider, wcClsid, _countof(wcClsid));
 		hr = SELFREG_E_CLASS;
 		if (cch > 0)
 		{
 			--cch;
-			hr = RegisterThumbExt(L".wmf", wcClsid, (UINT)cch);
+			hr = RegisterShellExt(L".wmf", wcClsid, (UINT)cch, g_rgszWmfPropList);
 			if (SUCCEEDED(hr))
 			{
-				RegisterThumbExt(L".wmz", wcClsid, (UINT)cch, true);
-				hr = RegisterThumbExt(L".emf", wcClsid, (UINT)cch);
+				RegisterShellExt(L".wmz", wcClsid, (UINT)cch, g_rgszWmfPropList, true);
+				hr = RegisterShellExt(L".emf", wcClsid, (UINT)cch, g_rgszWmfPropList);
 				if (SUCCEEDED(hr))
 				{
-					RegisterThumbExt(L".emz", wcClsid, (UINT)cch, true);
+					RegisterShellExt(L".emz", wcClsid, (UINT)cch, g_rgszWmfPropList, true);
 					hr = S_OK;
 				}
 			}
@@ -491,13 +537,14 @@ HRESULT RegSvr::RegisterWmfThumbs()
 }
 
 
-HRESULT RegSvr::RegisterThumbExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option)
+HRESULT RegSvr::RegisterShellExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid,
+		_In_reads_(PROPLIST_COUNT) const PCSTR* rgszList, bool option)
 {
 	HRESULT hr = WriteThumbExt(HK_CLASSES_ROOT, szDotExt, szClsid, cchClsid, option);
 	if (SUCCEEDED(hr))
 	{
-		HKEY hKey;
 		bool keyCreated;
+		HKEY hKey;
 		hr = OpenSetupKey(L"PhotoPropertyHandler", &hKey, &keyCreated);
 		if (S_OK == hr)
 		{
@@ -509,9 +556,12 @@ HRESULT RegSvr::RegisterThumbExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) 
 				hr = DeleteKey(hKey, szDotExt);
 			::RegCloseKey(hKey);
 
-			if (SUCCEEDED(hr) && S_OK == OpenKey(HK_CLASSES_ROOT, L"SystemFileAssociations", REGSAM_CREATE_SUBKEY, &hKey))
+			if (SUCCEEDED(hr) && S_OK == OpenKey(HK_CLASSES_ROOT, L"SystemFileAssociations", REGSAM_WRITE, &hKey, &keyCreated))
 			{
+				if (keyCreated)
+					option = false;
 				WriteThumbExt(hKey, szDotExt, szClsid, cchClsid, option);
+				WritePropLists(hKey, szDotExt, rgszList, option);
 				::RegCloseKey(hKey);
 			}
 		}
@@ -519,32 +569,77 @@ HRESULT RegSvr::RegisterThumbExt(_In_ PCWSTR szDotExt, _In_reads_(cchClsid + 1) 
 	return hr;
 }
 
-HRESULT RegSvr::WriteThumbExt(_In_ HKEY hkRoot, _In_ PCWSTR szDotExt,
-		_In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option) const
+HRESULT RegSvr::WriteThumbExt(_In_ HKEY hKey, _In_ PCWSTR szDotExt,
+		_In_reads_(cchClsid + 1) PCWSTR szClsid, UINT cchClsid, bool option)
 {
 	HRESULT hr;
+	bool keyCreated;
+	HKEY hkProp;
+
+	if (S_OK != OpenSetupKey(L"PropertySystem\\PropertyHandlers", &hkProp))
+		hkProp = NULL;
+
 	if (IsInstall())
 	{
-		bool keyCreated;
-		hr = CreateKey(hkRoot, szDotExt, REGSAM_WRITE, &hkRoot, &keyCreated);
+		hr = CreateKey(hKey, szDotExt, REGSAM_WRITE, &hKey, &keyCreated);
 		if (S_OK == hr)
 		{
 			if (keyCreated)
 				option = false;
-			hr = SetKeyValue(hkRoot, L"ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}", nullptr, szClsid, cchClsid, option);
-			::RegCloseKey(hkRoot);
+			hr = SetKeyValue(hKey, L"ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}", nullptr, szClsid, cchClsid, option);
+			::RegCloseKey(hKey);
+
+			if (AllTrue(S_OK == hr, hkProp))
+				SetKeyValue(hkProp, szDotExt, nullptr, szClsid, cchClsid, option);
 		}
 	}
 	else
 	{
-		hr = OpenKey(hkRoot, szDotExt, REGSAM_WRITE, &hkRoot);
+		hr = OpenKey(hKey, szDotExt, REGSAM_WRITE, &hKey);
 		if (S_OK == hr)
 		{
-			hr = DeleteKey(hkRoot, L"ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}");
+			hr = DeleteKey(hKey, L"ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}");
 			if (SUCCEEDED(hr))	// try to delete an empty ShellEx key
-				::RegDeleteKeyW(hkRoot, L"ShellEx");
-			::RegCloseKey(hkRoot);
+				::RegDeleteKeyW(hKey, L"ShellEx");
+			::RegCloseKey(hKey);
 		}
+		if (hkProp)
+		{
+			const HRESULT hrTmp = DeleteKey(hkProp, szDotExt);
+			if (AllTrue(FAILED(hrTmp), SUCCEEDED(hr)))
+				hr = hrTmp;
+		}
+	}
+	if (hkProp)
+		::RegCloseKey(hkProp);
+	return hr;
+}
+
+
+HRESULT RegSvr::WritePropLists(_In_ HKEY hKey, _In_ PCWSTR szDotExt, _In_reads_(PROPLIST_COUNT) const PCSTR* rgszList, bool option) const
+{
+	UINT count = 0;
+	bool wasCreated;
+	HRESULT hr = OpenKey(hKey, szDotExt, REGSAM_SET_VALUE, &hKey, &wasCreated);
+	if (S_OK == hr)
+	{
+		WCHAR wczName[MAX_VALUE_NAME];
+		if (wasCreated)
+			option = false;
+		for (UINT i = 0; i < PROPLIST_COUNT; ++i)
+		{
+			ASSERT(strlen(g_rgszPropListNames[i]) < MAX_VALUE_NAME);
+			if (wcAsciiToWide(g_rgszPropListNames[i], wczName, MAX_VALUE_NAME))
+			{
+				if (!IsInstall())
+					count += (S_OK == DeleteValue(hKey, wczName));
+				else if (!option || !StringValueExists(hKey, nullptr, wczName))
+					count += (S_OK == SetValue(hKey, wczName, rgszList[i]));
+			}
+		}
+		::RegCloseKey(hKey);
+		ASSERT(!IsInstall() || PROPLIST_COUNT == count);
+		hr = (count ? S_OK : S_FALSE);
 	}
 	return hr;
 }
@@ -696,8 +791,8 @@ HRESULT RegSvr::WritePattern(_In_ HKEY hKey, _In_ PCWSTR szIndex, DWORD32 Length
 
 void RegSvr::RegisterSvgTypes()
 {
-	RegisterPictureType(L".svg", SVG_MIME_TYPE, CSLEN_(SVG_MIME_TYPE), IDI_SVG_FILE);
-	RegisterPictureType(L".svgz", SVG_MIME_TYPE, CSLEN_(SVG_MIME_TYPE), IDI_SVGZ_FILE);
+	RegisterPictureType(L".svg", SVG_MIME_TYPE, CSLEN_(SVG_MIME_TYPE), IDI_SVG_FILE, g_rgszSvgPropList);
+	RegisterPictureType(L".svgz", SVG_MIME_TYPE, CSLEN_(SVG_MIME_TYPE), IDI_SVGZ_FILE, g_rgszSvgPropList);
 }
 
 
@@ -716,11 +811,12 @@ void RegSvr::RegisterWmfTypes()
 
 
 HRESULT RegSvr::RegisterPictureType(_In_ PCWSTR szDotExt,
-	_In_reads_(cchContType + 1) PCWSTR szContentType, UINT cchContType, UINT iconId)
+		_In_reads_(cchContType + 1) PCWSTR szContentType, UINT cchContType,
+		UINT iconId, _In_reads_(PROPLIST_COUNT) const PCSTR* rgszList)
 {
 	HRESULT hr = (IsInstall() ? WritePictureType(szDotExt, szContentType, cchContType) : S_FALSE);
-	HKEY hkExt;
-	if (SUCCEEDED(hr) && S_OK == OpenKey(HK_CLASSES_ROOT, szDotExt, REGSAM_CREATE_SUBKEY, &hkExt))
+	HKEY hKey;
+	if (SUCCEEDED(hr) && S_OK == OpenKey(HKEY_CLASSES_ROOT, szDotExt, REGSAM_CREATE_SUBKEY, &hKey))
 	{
 		WCHAR wcVal[MAX_PATH + 12];
 		if (IsInstall())
@@ -731,10 +827,10 @@ HRESULT RegSvr::RegisterPictureType(_In_ PCWSTR szDotExt,
 				wmemcpy(wcVal, m_wcsModule, m_cchModule);
 				wcVal[m_cchModule] = L',';
 				const UINT cchPre = (m_cchModule + 1);
-				const UINT cchId = wcInt32ToDec(-(INT32)iconId, wcVal + cchPre, _countof(wcVal) - cchPre);
-				if (cchId && (!StringValueExists(hkExt, L"DefaultIcon", nullptr)
-					|| ValueContainsModule(hkExt, L"DefaultIcon", nullptr)) &&
-					S_OK == CreateKey(hkExt, L"DefaultIcon", REGSAM_SET_VALUE, &hkDefIcon))
+				UINT cchId = wcInt32ToDec(-(INT32)iconId, wcVal + cchPre, _countof(wcVal) - cchPre);
+				if (cchId && (!StringValueExists(hKey, L"DefaultIcon", (PCWSTR)nullptr)
+					|| ValueContainsModule(hKey, L"DefaultIcon", nullptr)) &&
+					S_OK == CreateKey(hKey, L"DefaultIcon", REGSAM_SET_VALUE, &hkDefIcon))
 				{
 					SetValue(hkDefIcon, (PCWSTR)nullptr, wcVal, cchPre + cchId);
 					::RegCloseKey(hkDefIcon);
@@ -742,11 +838,11 @@ HRESULT RegSvr::RegisterPictureType(_In_ PCWSTR szDotExt,
 			}
 		}
 		else if (wcGetModuleName(g_hModule, wcVal, _countof(wcVal)) &&
-			ValueContainsModule(hkExt, L"DefaultIcon", nullptr, wcVal))
+			ValueContainsModule(hKey, L"DefaultIcon", nullptr, wcVal))
 		{
-			hr = (ERROR_SUCCESS == ::RegDeleteKeyW(hkExt, L"DefaultIcon")) ? S_OK : S_FALSE;
+			hr = (ERROR_SUCCESS == ::RegDeleteKeyW(hKey, L"DefaultIcon")) ? S_OK : S_FALSE;
 		}
-		::RegCloseKey(hkExt);
+		::RegCloseKey(hKey);
 	}
 	return hr;
 }
@@ -761,7 +857,7 @@ HRESULT RegSvr::WritePictureType(_In_ PCWSTR szDotExt,
 	HRESULT hr = OpenSetupKey(L"Explorer\\KindMap", &hkKindMap, &created);
 	if (S_OK == hr)
 	{
-		hr = SetKeyValue(hkKindMap, nullptr, szDotExt, L"picture", CSLEN_(L"picture"), option);
+		hr = SetKeyValue(hkKindMap, nullptr, szDotExt, KIND_PICTURE, CSLEN_(KIND_PICTURE), option);
 		::RegCloseKey(hkKindMap);
 		if (S_OK == hr)
 			hr = SetKeyValue(HK_CLASSES_ROOT, szDotExt, L"ContentType", szContentType, cchContType, option);
@@ -770,7 +866,8 @@ HRESULT RegSvr::WritePictureType(_In_ PCWSTR szDotExt,
 }
 
 
-_Success_(return == S_OK) HRESULT RegSvr::OpenSetupKey(_In_ PCWSTR szSubkey, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated)
+_Success_(return == S_OK)
+HRESULT RegSvr::OpenSetupKey(_In_ PCWSTR szSubkey, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated)
 {
 	if (!m_hkSetup)
 	{
@@ -815,6 +912,13 @@ NOALIAS _Translates_Win32_to_HRESULT_(lstat) HRESULT RegSvr::ToHRESULT(LSTATUS l
 	return HRESULT_FROM_WIN32((ULONG)lstat);
 }
 
+WARNING_SUPPRESS(28196)
+NOALIAS _Translates_Win32_to_HRESULT_(lstat) HRESULT RegSvr::ToDelHRESULT(LSTATUS lstat)
+{
+	return AllTrue(ERROR_FILE_NOT_FOUND != lstat, ERROR_PATH_NOT_FOUND != lstat, ERROR_KEY_DELETED != lstat)
+			? ToHRESULT(lstat) : (HRESULT)lstat;
+}
+
 
 _Success_(return == S_OK) HRESULT RegSvr::OpenKey(_In_ HKEY hkRoot, _In_ PCWSTR szSubkey,
 		REGSAM regSam, _Out_ PHKEY phKey, _Out_opt_ bool* wasCreated) const
@@ -824,10 +928,7 @@ _Success_(return == S_OK) HRESULT RegSvr::OpenKey(_In_ HKEY hkRoot, _In_ PCWSTR 
 
 	if (wasCreated)
 		*wasCreated = false;
-	const LSTATUS lstat = ::RegOpenKeyExW(hkRoot, szSubkey, REGKEY_OPTION, regSam, phKey);
-	if (AllTrue(ERROR_FILE_NOT_FOUND != lstat, ERROR_PATH_NOT_FOUND != lstat, ERROR_KEY_DELETED != lstat))
-		return ToHRESULT(lstat);
-	return S_FALSE;
+	return ToDelHRESULT(::RegOpenKeyExW(hkRoot, szSubkey, REGKEY_OPTION, regSam, phKey));
 }
 
 
@@ -845,16 +946,18 @@ NOALIAS _Success_(return == S_OK) HRESULT RegSvr::CreateKey(_In_ HKEY hkRoot, _I
 }
 
 
-NOALIAS HRESULT RegSvr::DeleteKey(_In_ HKEY hkRoot, _In_opt_ PCWSTR szSubkey)
+NOALIAS HRESULT RegSvr::DeleteKey(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey)
 {
-	const LSTATUS lstat = ::RegDeleteTreeW(hkRoot, szSubkey);
-	if (AllTrue(ERROR_FILE_NOT_FOUND != lstat, ERROR_PATH_NOT_FOUND != lstat, ERROR_KEY_DELETED != lstat))
-		return ToHRESULT(lstat);
-	return S_FALSE;
+	return ToDelHRESULT(::RegDeleteTreeW(hKey, szSubkey));
+}
+
+NOALIAS HRESULT RegSvr::DeleteValue(_In_ HKEY hKey, _In_opt_ PCWSTR szName)
+{
+	return ToDelHRESULT(::RegDeleteValueW(hKey, szName));
 }
 
 
-NOALIAS BOOL RegSvr::StringValueExists(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szName)
+NOALIAS bool RegSvr::StringValueExists(_In_ HKEY hKey, _In_opt_ PCWSTR szSubkey, _In_opt_ PCWSTR szName)
 {
 	DWORD cb = 0;
 	return (ERROR_SUCCESS == ::RegGetValueW(hKey, szSubkey, szName, RRF_RT_REG_SZ|RRF_RT_REG_EXPAND_SZ,
@@ -895,10 +998,9 @@ NOALIAS HRESULT RegSvr::SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName,
 	PWSTR pwcName = nullptr;
 	if (szName && szName[0])
 	{
-		constexpr size_t WNAME_BUFF_SIZE = 64;
-		ASSERT(strlen(szName) < WNAME_BUFF_SIZE);
-		pwcName = (PWSTR)_alloca(WNAME_BUFF_SIZE * sizeof(WCHAR));
-		if (!wcAsciiToWide(szName, (int)WNAME_BUFF_SIZE, pwcName))
+		ASSERT(strlen(szName) < MAX_VALUE_NAME);
+		pwcName = (PWSTR)_alloca(MAX_VALUE_NAME * sizeof(WCHAR));
+		if (!wcAsciiToWide(szName, pwcName, (int)MAX_VALUE_NAME))
 			return HRESULT_WIN_ERROR;
 	}
 	return ToHRESULT(::RegSetValueExW(hKey, pwcName, 0, regType, (PCBYTE)pValue, cbSize));
@@ -916,13 +1018,27 @@ NOALIAS HRESULT RegSvr::SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName,
 	return SetValue(hKey, szName, REG_SZ, szValue, (cchVal + 1) * sizeof(WCHAR));
 }
 
-NOALIAS HRESULT RegSvr::SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName, _In_ PCSTR szValue)
+NOALIAS NOINLINE HRESULT RegSvr::SetValue(_In_ HKEY hKey, _In_opt_ PCSTR szName, _In_ PCSTR szValue)
 {
-	WCHAR wcVal[80];
-	ASSERT(strlen_s(szValue) < _countof(wcVal));
-	const UINT cchVal = wcAsciiToWide(szValue, _countof(wcVal), wcVal);
+	PWSTR pwcName = nullptr;
+	if (szName && szName[0])
+	{
+		ASSERT(strlen(szName) < MAX_VALUE_NAME);
+		pwcName = (PWSTR)_alloca(MAX_VALUE_NAME * sizeof(WCHAR));
+		if (!wcAsciiToWide(szName, pwcName, (int)MAX_VALUE_NAME))
+			return HRESULT_WIN_ERROR;
+	}
+	return SetValue(hKey, pwcName, szValue);
+	
+}
+
+NOALIAS NOINLINE HRESULT RegSvr::SetValue(_In_ HKEY hKey, _In_opt_ PCWSTR szName, _In_ PCSTR szValue)
+{
+	WCHAR wczVal[1024];	// must be large enough for property lists
+	ASSERT(strlen_s(szValue) < _countof(wczVal));
+	const UINT cchVal = wcAsciiToWide(szValue, wczVal, _countof(wczVal));
 	if (cchVal)
-		return SetValue(hKey, szName, REG_SZ, wcVal, (cchVal + 1) * sizeof(WCHAR));
+		return SetValue(hKey, szName, wczVal, cchVal);
 	return HRESULT_WIN_ERROR;
 }
 
@@ -939,7 +1055,7 @@ NOALIAS HRESULT RegSvr::SetValue(_In_ HKEY hKey, const UValData& Value)
 		if (Value_GUID == Value.cchValue)
 			cchValue = (UINT)(StringFromGUID2(*(Value.pGuid), const_cast<PWSTR>(szValue), WCHAR_BUFF_SIZE) - 1);
 		else
-			cchValue = wcAsciiToWide(Value.szAsciiVal, WCHAR_BUFF_SIZE, const_cast<PWSTR>(szValue));
+			cchValue = wcAsciiToWide(Value.szAsciiVal, const_cast<PWSTR>(szValue), WCHAR_BUFF_SIZE);
 		if ((int)cchValue <= 0)
 			return SELFREG_E_CLASS;
 	}

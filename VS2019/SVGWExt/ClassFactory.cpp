@@ -9,13 +9,13 @@ namespace RootNamespace {
 // Class factory //////////////////////////////////////////////////////
 
 
-class DllClassFactory : public IClassFactory
+class DllClassFactory final : public IClassFactory
 {
 	volatile ULONG m_cRef;
 	const ServComp m_compType;
 
 public:
-	DllClassFactory(_In_ ServComp compType, _In_ UINT cRef) : m_cRef(cRef), m_compType(compType) { DllAddRef(); }
+	DllClassFactory(_In_ ServComp compType, _In_ UINT cRef = 1) : m_cRef(cRef), m_compType(compType) { DllAddRef(); }
 	~DllClassFactory() { DllRelease(); }
 
 	DECLARE_IUNKNOWN;
@@ -128,7 +128,7 @@ _Check_return_ STDAPI DllGetClassObject(_In_ REFCLSID rclsid, _In_ REFIID riid, 
 				return CLASS_E_CLASSNOTAVAILABLE;
 			hr = E_NOINTERFACE;
 			if (IsEqualGUID2(riid, IID_IClassFactory, IID_IUnknown))
-				hr = (*ppv = static_cast<IClassFactory*>(new DllClassFactory(ctype, 1))) ? S_OK : E_OUTOFMEMORY;
+				hr = (*ppv = static_cast<IClassFactory*>(new DllClassFactory(ctype))) ? S_OK : E_OUTOFMEMORY;
 		}
 	}
 	return hr;

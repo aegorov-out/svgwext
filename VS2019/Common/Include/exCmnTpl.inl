@@ -491,7 +491,7 @@ private:
 // Mixed memory buffer ////////////////////////////////////////////////
 
 
-constexpr UINT HEAP_MEMORY_THRESHOLD = (1024 * 1024 * 8 - 1);	// 0x007FFFFF
+constexpr UINT HEAP_MEMORY_THRESHOLD = (1024 * 1024 * 4 - 1);	// 0x003FFFFF
 
 template <typename TElem>
 class TMMemBuffer : public Uncopyable_

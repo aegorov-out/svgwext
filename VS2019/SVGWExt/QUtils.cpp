@@ -34,7 +34,7 @@ WCXSTDAPI_(UINT) wcNum32ToStr(UINT32 iVal, bool_t isSigned, _Out_writes_to_(cchM
 }
 
 
-WCXFASTAPI_(UINT) wcAsciiToWide(_In_opt_ PCSTR szAscii, int cchBuff, _Out_writes_to_(cchBuff, return + 1) PWSTR pwcBuff)
+WCXFASTAPI_(UINT) wcAsciiToWide(_In_opt_ PCSTR szAscii, _Out_writes_to_(cchBuff, return + 1) PWSTR pwcBuff, int cchBuff)
 {
 	if (cchBuff > 0)
 	{
@@ -91,21 +91,18 @@ WCXCAPI_(bool_t) wcAsciiIsAnyEqual(_In_opt_ PCWSTR szwCmp, UINT cArgs, ...)
 }
 
 
+WCXFASTAPI_(int) wcCompareString(_In_NLS_string_opt_(cwch) PCWCH pwc1,
+			_In_NLS_string_opt_(cwch) PCWCH pwc2, int cwch)
+{
+	if (AllTrue(pwc1, pwc2))
+		return ::CompareStringOrdinal(pwc1, cwch, pwc2, cwch, TRUE) - CSTR_EQUAL;
+	return ComparePointers(pwc1, pwc2);
+}
+
+
 WCXFASTAPI_(PWSTR) wcFindFileName(_In_NLS_string_opt_(pathLen) PCWCH pathName, int pathLen)
 {
-	if (NLStringLen(pathName, &pathLen))
-	{
-		PCWSTR pend = pathName + ((UINT)pathLen - 1);
-		while (pend >= pathName)
-		{
-			const WCHAR ch = *pend--;
-			if (L'\\' != ch && L'/' != ch && L':' != ch)
-				continue;
-			pathName = pend + 2;
-			break;
-		}
-	}
-	return (PWSTR)pathName;
+	return ::InlineFindFileNameW(pathName, pathLen);
 }
 
 

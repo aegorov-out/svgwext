@@ -375,8 +375,12 @@ template <class V, class T> V* SafeAssign(V* val, T** targ)
 
 #define GUIDFromString(psz, pguid)	CPP_GLOBAL(IIDFromString(psz, pguid))
 #define StringToGUID(psz, pguid)	CPP_GLOBAL(IIDFromString(psz, pguid))
-#define StringFromGUID(rguid, pbuf)	CPP_GLOBAL(StringFromIID(rguid, pbuf))
-#define GUIDToString(rguid, pbuf)	CPP_GLOBAL(IIDFromString(rguid, pbuf))
+_Success_(return > 0)
+INLINE UINT StringFromGUID(_In_ REFGUID rguid, _Out_writes_to_(cchMax, return-1) PWSTR szGuid, _In_ int cchMax)
+{
+	const int cch = CPP_GLOBAL(StringFromGUID2(rguid, szGuid, cchMax));
+	return (cch > 0) ? (UINT)(cch - 1) : 0;
+}
 
 #define SetGUIDNull(pguid)			Zero16Bytes(pguid)
 
@@ -753,6 +757,11 @@ inline HRESULT Stream_Position(_In_ IStream* pstm, _Out_ PULONGLONG pbpos)
 {
 	*pbpos = 0;
 	return pstm->Seek({ 0 }, STREAM_SEEK_CUR, (PULARGE_INTEGER)pbpos);
+}
+
+inline HRESULT Stream_SeekStart(_In_ IStream* pstm)
+{
+	return pstm->Seek({ 0 }, STREAM_SEEK_SET, nullptr);
 }
 
 

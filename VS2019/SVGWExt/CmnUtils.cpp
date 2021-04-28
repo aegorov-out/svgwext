@@ -123,16 +123,18 @@ WCXFASTAPI wcCreateWicFactory(_COM_Outptr_result_nullonfailure_ IWICImagingFacto
 }
 
 
+static constexpr inline D2D1_DEBUG_LEVEL D2DebugLevel() {
+#ifdef _DEBUG
+	return (::IsDebuggerPresent() ? D2D1_DEBUG_LEVEL_ERROR : D2D1_DEBUG_LEVEL_NONE);
+#else
+	return D2D1_DEBUG_LEVEL_NONE;
+#endif
+}
+
 _Check_return_ _Success_(return == S_OK)
 WCXSTDAPI wcCreateD2DFactory(BOOL multiThreaded, _COM_Outptr_result_nullonfailure_ ID2D1Factory6** ppD2D1Fact)
 {
-#ifdef _DEBUG
-	constexpr D2D1_DEBUG_LEVEL D2D1_DEBUG_LEVEL = D2D1_DEBUG_LEVEL_WARNING;
-#else
-	constexpr D2D1_DEBUG_LEVEL D2D1_DEBUG_LEVEL = D2D1_DEBUG_LEVEL_NONE;
-#endif
-
-	const D2D1_FACTORY_OPTIONS opts = { D2D1_DEBUG_LEVEL };
+	const D2D1_FACTORY_OPTIONS opts = { D2DebugLevel() };
 	multiThreaded = (multiThreaded ? D2D1_FACTORY_TYPE_MULTI_THREADED : D2D1_FACTORY_TYPE_SINGLE_THREADED);
 	HRESULT hr = ::D2D1CreateFactory((D2D1_FACTORY_TYPE)multiThreaded, IID_ID2D1Factory7, &opts, PPV_ARG(ppD2D1Fact));
 	if (S_OK != hr)
@@ -176,12 +178,8 @@ _Check_return_ WCXFASTAPI_(LONG) wcIsDXRecreateError(HRESULT hr)
 		DXGI_ERROR_ACCESS_LOST, DXGI_ERROR_SESSION_DISCONNECTED, DXGI_ERROR_NOT_CURRENT,
 		D2DERR_RECREATE_TARGET, E_ACCESSDENIED, E_OUTOFMEMORY
 	};
-	for (UINT i = 0; i < ARRAYSIZE(s_rghr); i++)
-	{
-		if (s_rghr[i] != (LONG32)hr)
-			continue;
+	if (dmemchr(s_rghr, (UINT)hr, ARRAYSIZE(s_rghr)))
 		return hr;
-	}
 	return (D3DDDIERR_DEVICEREMOVED != hr) ? 0 : DXGI_ERROR_DEVICE_REMOVED;
 }
 
@@ -221,7 +219,7 @@ WCXFASTAPI wcCreateStreamOnFile(_In_opt_ PCWSTR szFileName, BOOL write, _COM_Out
 	return hr;
 }
 
-_Success_(return == S_OK)
+_Check_return_ _Success_(return == S_OK)
 WCXSTDAPI wcCreateStreamOnItem(_In_ IShellItem* psi, BOOL write, _COM_Outptr_result_nullonfailure_ IStream** ppstm)
 {
 	IBindCtx* pbc;
@@ -234,6 +232,139 @@ WCXSTDAPI wcCreateStreamOnItem(_In_ IShellItem* psi, BOOL write, _COM_Outptr_res
 			return S_OK;
 	}
 	*ppstm = nullptr;
+	return hr;
+}
+
+
+_Check_return_ _Success_(return == S_OK)
+WCXFASTAPI wcCreateTempFileStream(_In_opt_ SIZE_T cbInitSize, _COM_Outptr_result_nullonfailure_ IStream** ppstm)
+{
+	union {
+		DWORD clen;
+		HRESULT hr;
+		UINT64 pref64;
+	};
+	WCHAR wcPath[MAX_PATH - 12];
+	WCHAR wcFName[MAX_PATH];
+
+	clen = ::GetTempPathW(_countof(wcPath), wcPath);
+	if (0 == clen)
+		goto ErrWin_;
+	if (clen >= _countof(wcPath))
+	{
+		hr = __HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
+		goto ErrRet_;
+	}
+	hr = ::SHPathPrepareForWriteW(NULL, NULL, wcPath, SHPPFW_DIRCREATE);
+	if (S_OK != hr)
+		goto ErrRet_;
+	pref64 = MAKEULONGLONGW(L'W', L'C', L'X', 0);
+	if (!::GetTempFileNameW(wcPath, (PCWSTR)&pref64, 0, wcFName))
+		goto ErrWin_;
+	hr = ::SHCreateStreamOnFileEx(wcFName, STGM_READWRITE|STGM_SHARE_EXCLUSIVE|STGM_CREATE|STGM_DELETEONRELEASE,
+			FILE_ATTRIBUTE_TEMPORARY, TRUE, nullptr, ppstm);
+	if (S_OK == hr)
+	{
+		if (cbInitSize)
+			(*ppstm)->SetSize(ToULargeInteger(cbInitSize));
+		return S_OK;
+	}
+
+ErrRet_:
+	*ppstm = nullptr;
+	return hr;
+ErrWin_:
+	hr = HRESULT_WIN_ERROR;
+	goto ErrRet_;
+}
+
+
+WARNING_SUPPRESS(6387 28196) _Check_return_ _Success_(return == S_OK)
+WCXFASTAPI wcCreateTempStream(_In_opt_ SIZE_T cbInitSize, _COM_Outptr_result_nullonfailure_ IStream** ppstm)
+{
+	if (AllTrue(cbInitSize, cbInitSize <= HEAP_MEMORY_THRESHOLD))
+	{
+		const HGLOBAL hmem = ::GlobalAlloc(GMEM_MOVEABLE, cbInitSize);
+		if (hmem)
+		{
+			if (S_OK == ::CreateStreamOnHGlobal(hmem, TRUE, ppstm))
+				return S_OK;
+			::GlobalFree(hmem);
+		}
+	}
+	return wcCreateTempFileStream(cbInitSize, ppstm);
+}
+
+
+_Check_return_ _Success_(return == S_OK)
+WCXFASTAPI wcCopyTempStream(_In_ IStream* pstmIn, _In_opt_ UINT64 cbCopy, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut)
+{
+	union {
+		STATSTG stat;
+		ULARGE_INTEGER pos;
+	};
+	stat.cbSize.QuadPart = 0;
+	HRESULT hr = pstmIn->Stat(&stat, STATFLAG_NONAME);
+	if (SUCCEEDED(hr))
+	{
+		if (AnyTrue(0 == cbCopy, cbCopy > stat.cbSize.QuadPart))
+			cbCopy = stat.cbSize.QuadPart;
+		pos.QuadPart = 0;
+		hr = pstmIn->Seek({ 0 }, STREAM_SEEK_CUR, &pos);
+		if (SUCCEEDED(hr))
+		{
+			hr = ERROR_CANNOT_COPY;
+			if (pos.QuadPart < cbCopy)
+			{
+				IStream* pout;
+				cbCopy -= pos.QuadPart;
+				hr = wcCreateTempStream((SIZE_T)cbCopy, &pout);
+				if (S_OK == hr)
+				{
+					hr = pstmIn->CopyTo(pout, stat.cbSize, nullptr, nullptr);
+					if (E_NOTIMPL == hr)
+					{
+						const UINT cbBuf = (UINT)MIN_(cbCopy, 1024 * 16);
+						void* const pbuf = malloc(cbBuf);
+						hr = E_OUTOFMEMORY;
+						if (pbuf)
+						{
+							ULONG cbRead = 0, cbWrite;
+							do {
+								cbCopy -= cbRead;
+								hr = pstmIn->Read(pbuf, cbBuf, &cbRead);
+								if (FAILED(hr))
+									break;
+								hr = WINCODEC_ERR_STREAMREAD;
+								if (0 == cbRead)
+									break;
+								WARNING_SUPPRESS(6385)
+								hr = pout->Write(pbuf, cbRead, &cbWrite);
+								if (FAILED(hr))
+									break;
+								hr = WINCODEC_ERR_STREAMWRITE;
+								if (cbWrite != cbRead)
+									break;
+								hr = S_OK;
+							} while (cbRead < cbCopy);
+							free(pbuf);
+						}
+					}
+					if (S_OK == hr)
+					{
+						hr = Stream_SeekStart(pout);
+						if (SUCCEEDED(hr))
+						{
+							*ppstmOut = pout;
+							return S_OK;
+						}
+					}
+					pout->Release();
+				}
+			}
+		}
+	}
+	*ppstmOut = nullptr;
 	return hr;
 }
 
