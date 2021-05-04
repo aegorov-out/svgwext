@@ -26,6 +26,7 @@
 <?endif?>
 <?define ResourcePath = "$(var.SolutionDir)RES"?>
 <?define ProductURL = "https://github.com/aegorov-out/svgwext"?>
+<?define DownloadURL = "$(var.ProductURL)/releases"?>
 
 <?define MainFilesGuid="C1D96019-6E8C-46D6-9CE2-4708E80D9FB0"?>
 <?define DocFilesGuid="CF09209C-ADC8-4D13-9924-0BB0CF7C45A4"?>

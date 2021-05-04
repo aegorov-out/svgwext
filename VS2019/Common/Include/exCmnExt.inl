@@ -109,7 +109,7 @@ __inline void* AddBytesU(const void* ptr, size_t cb)
 #define _zerow(dst, cw)			__stosw((unsigned short*)(dst), 0, (size_t)(cw))
 #define _zerod(dst, cd)			__stosd((unsigned long*)(dst), 0, (size_t)(cd))
 
-INLINE void* dqmemcpy(void* dst, const void* src, size_t cdq)
+INLINE void* __fastcall dqmemcpy(void* dst, const void* src, size_t cdq)
 {
 	for (; cdq; cdq--)
 	{
@@ -121,7 +121,7 @@ INLINE void* dqmemcpy(void* dst, const void* src, size_t cdq)
 }
 #define _movsdq(dst, src, cdq)		dqmemcpy(dst, src, cdq)
 
-INLINE void* dqmemzero(void* dst, size_t cdq)
+INLINE void* __fastcall dqmemzero(void* dst, size_t cdq)
 {
 	const __m128i mz = _mm_setzero_si128();
 	for (; cdq; cdq--)
@@ -139,8 +139,8 @@ INLINE void* dqmemzero(void* dst, size_t cdq)
 #define Zero16Bytes(dst)			_mm_storeu_si128((__m128i*)(dst), _mm_setzero_si128())
 #define Copy16Bytes(dst, src)		_mm_storeu_si128((__m128i*)(dst), _mm_loadu_si128((__m128i*)(src)))
 
-#define ZeroMemDQ(ptr, cdq)			((1 != (cdq)) ? (void)dqmemzero((void*)(ptr), (size_t)(cdq)) : Zero16Bytes(ptr))
-#define CopyMemDQ(dst, src, cdq)	((1 != (cdq)) ? (void)dqmemcpy((void*)(dst), (const void*)(src), (size_t)(cdq)) : Copy16Bytes(dst, src))
+#define ZeroMemDQ(ptr, cdq)			((1 != (cdq)) ? (void)CPP_COMMONS(dqmemzero((void*)(ptr), (size_t)(cdq))) : Zero16Bytes(ptr))
+#define CopyMemDQ(dst, src, cdq)	((1 != (cdq)) ? (void)CPP_COMMONS(dqmemcpy((void*)(dst), (const void*)(src), (size_t)(cdq))) : Copy16Bytes(dst, src))
 
 
 #ifdef _WIN64
@@ -700,6 +700,11 @@ INLINE unsigned long long SetDefaultMaskBit64(unsigned long long value,
 
 // XMM extensions /////////////////////////////////////////////////////
 
+#define mm_sll_ps(ps, bytes)	_mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(ps), (int)(unsigned)(bytes)))
+#define mm_srl_ps(ps, bytes)	_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(ps), (int)(unsigned)(bytes)))
+#define mm_sll_pd(pd, bytes)	_mm_castsi128_pd(_mm_slli_si128(_mm_castpd_si128(pd), (int)(unsigned)(bytes)))
+#define mm_srl_pd(pd, bytes)	_mm_castsi128_pd(_mm_srli_si128(_mm_castpd_si128(pd), (int)(unsigned)(bytes)))
+
 
 INLINE void mm_setzero_pi(__m128i* p128)
 {
@@ -979,6 +984,14 @@ INLINE __m128 mm_swap02_ps(__m128 epi32)
 INLINE __m128 mm_ps_1()
 {
 	return _mm_castsi128_ps(CPP_COMMONS(mm_set1_epi32(0x3F800000)));
+}
+INLINE __m128 mm_ps_72()
+{
+	return _mm_castsi128_ps(CPP_COMMONS(mm_set1_epi32(0x42900000)));
+}
+INLINE __m128 mm_ps_96()
+{
+	return _mm_castsi128_ps(CPP_COMMONS(mm_set1_epi32(0x42C00000)));
 }
 INLINE __m128 mm_ps_127()
 {

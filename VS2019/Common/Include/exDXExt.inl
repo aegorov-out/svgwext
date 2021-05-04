@@ -94,6 +94,10 @@ inline INT32 DipsToPixelsT(FLOAT dips, FLOAT dpi)
 {
 	return FltToInt32((dips * dpi) / 96);
 }
+inline INT32 DipsToPixelsF(FLOAT dips, FLOAT dpi)
+{
+	return FltToInt32(floorf((dips * dpi) / 96));
+}
 inline INT32 DipsToPixelsR(FLOAT dips, FLOAT dpi)
 {
 	return CPP_COMMONS(ftoi32f((dips * dpi) / 96));
@@ -235,7 +239,7 @@ inline D2D_RECT_F& OffsetRect(_Inout_ D2D_RECT_F* prc, FLOAT dx, FLOAT dy)
 	prc->left += dx;
 	prc->right += dx;
 	prc->top += dy;
-	prc->bottom += dx;
+	prc->bottom += dy;
 	return *prc;
 }
 
@@ -252,9 +256,43 @@ inline D2D_RECT_F& InflateRect(_Inout_ D2D_RECT_F* prc, FLOAT d)
 	return CPP_COMMONS(InflateRect(prc, d, d));
 }
 
-inline D2D_RECT_F ShrinkRect(_In_ const D2D_RECT_F& rc, FLOAT d)
+FORCEINLINE D2D_RECT_F ShrinkRect(_In_ const D2D_RECT_F& rc, FLOAT d)
 {
 	return D2D_RECT_F{ rc.left + d, rc.top + d, rc.right - d, rc.bottom - d };
+}
+
+inline D2D_RECT_F& QUnionRect(_Out_ D2D_RECT_F* dest, const D2D_RECT_F& src1, const D2D_RECT_F& src2)
+{
+	const __m128 src = _mm_loadu_ps(&(src2.left));
+	__m128 tl = _mm_loadu_ps(&(src1.left));
+	__m128 th = _mm_max_ps(tl, src);
+	tl = _mm_min_ps(tl, src);
+	th = mm_srl_ps(th, 8);
+	_mm_storeu_ps(&(dest->left), _mm_movelh_ps(tl, th));
+	return *dest;
+}
+FORCEINLINE D2D_RECT_F QUnionRect(const D2D_RECT_F& src1, const D2D_RECT_F& src2)
+{
+	D2D_RECT_F rc;
+	CPP_COMMONS(QUnionRect(&rc, src1, src2));
+	return rc;
+}
+
+inline D2D_RECT_F& QIntersectRect(_Out_ D2D_RECT_F* dest, const D2D_RECT_F& src1, const D2D_RECT_F& src2)
+{
+	const __m128 src = _mm_loadu_ps(&(src2.left));
+	__m128 tl = _mm_loadu_ps(&(src1.left));
+	__m128 th = _mm_min_ps(tl, src);
+	tl = _mm_max_ps(tl, src);
+	th = mm_srl_ps(th, 8);
+	_mm_storeu_ps(&(dest->left), _mm_movelh_ps(tl, th));
+	return *dest;
+}
+FORCEINLINE D2D_RECT_F QIntersectRect(const D2D_RECT_F& src1, const D2D_RECT_F& src2)
+{
+	D2D_RECT_F rc;
+	CPP_COMMONS(QIntersectRect(&rc, src1, src2));
+	return rc;
 }
 
 

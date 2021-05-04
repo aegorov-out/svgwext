@@ -394,11 +394,13 @@ HRESULT RegSvr::RegisterServer(_In_ REFCLSID rClsid, _In_ PCSTR szThreadModel, _
 			{
 				m_hkClass = hkCls;
 				SetValue(hkCls, szName);
-				/*if (!isDecoder)
+			#ifdef DEBUG
+				if (!isDecoder)
 				{
 					const DWORD dval = 1;
 					SetValue(hkCls, "DisableProcessIsolation", REG_DWORD, &dval, sizeof(dval));
-				}*/
+				}
+			#endif
 				hr = CreateKey(hkCls, L"InprocServer32", REGSAM_SET_VALUE, &hKey);
 				if (S_OK == hr)
 				{

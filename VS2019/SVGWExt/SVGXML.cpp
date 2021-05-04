@@ -227,6 +227,27 @@ _Check_return_ WCXFASTAPI wcUrlMatchesSvgPattern(_In_ PCWSTR szUrl)
 }
 
 
+static inline HRESULT GetAttributeValue(_In_ ID2D1SvgElement* pelem, _In_ PCWSTR name, _Out_ D2D1_SVG_VIEWBOX* value)
+{
+#ifdef _DEBUG
+	if (pelem->IsAttributeSpecified(name))
+		return pelem->GetAttributeValue(name, D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, value, sizeof(D2D1_SVG_VIEWBOX));
+	return E_FAIL;
+#else
+	return pelem->GetAttributeValue(name, D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, value, sizeof(D2D1_SVG_VIEWBOX));
+#endif
+}
+static inline HRESULT GetAttributeValue(_In_ ID2D1SvgElement* pelem, _In_ PCWSTR name, _Out_ D2D1_SVG_LENGTH *value)
+{
+#ifdef _DEBUG
+	if (pelem->IsAttributeSpecified(name))
+		return pelem->GetAttributeValue(name, value);
+	return E_FAIL;
+#else
+	return pelem->GetAttributeValue(name, value);
+#endif
+}
+
 _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t removeSize, _Out_ D2D_SIZE_F* pSize)
 {
 	HRESULT hr = E_INVALIDARG;
@@ -241,17 +262,17 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 
 			svgDoc->GetRoot(&svgRoot);
 
-			if (S_OK != svgRoot->GetAttributeValue(L"viewBox", D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, &viewBox, sizeof(viewBox)))
+			if (S_OK != GetAttributeValue(svgRoot, L"viewBox", &viewBox))
 			{
 				noViewBox = true;
 				ZeroStruct(&viewBox);
 			}
-			if (S_OK != svgRoot->GetAttributeValue(L"width", &width))
+			if (S_OK != GetAttributeValue(svgRoot, L"width", &width))
 				width.value = viewBox.width;
 			else if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == width.units)
 				width.value *= viewBox.width / 100;
 
-			if (S_OK != svgRoot->GetAttributeValue(L"height", &height))
+			if (S_OK != GetAttributeValue(svgRoot, L"height", &height))
 				height.value = viewBox.height;
 			else if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == height.units)
 				height.value *= viewBox.height / 100;
@@ -262,13 +283,13 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 				{
 					D2D1_SVG_LENGTH x, y;
 					ASSUME(0 == viewBox.x && 0 == viewBox.y);
-					if (S_OK == svgRoot->GetAttributeValue(L"x", &x))
+					if (S_OK == GetAttributeValue(svgRoot, L"x", &x))
 					{
 						viewBox.x = x.value;
 						if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == x.units)
 							viewBox.x /= 100;
 					}
-					if (S_OK == svgRoot->GetAttributeValue(L"y", &y))
+					if (S_OK == GetAttributeValue(svgRoot, L"y", &y))
 					{
 						viewBox.y = y.value;
 						if (D2D1_SVG_LENGTH_UNITS_PERCENTAGE == y.units)
@@ -293,7 +314,6 @@ _Check_return_ WCXSTDAPI wcUpdateSvgSize(_In_ ID2D1SvgDocument* svgDoc, bool_t r
 				if (SUCCEEDED(hr))
 					return S_OK;
 			}
-
 			hr = WINCODEC_ERR_IMAGESIZEOUTOFRANGE;
 		}
 		Zero8Bytes(pSize);

@@ -40,7 +40,7 @@
 		<Icon Id="AppIcon" SourceFile="$(var.ResourcePath)\SVGWView.ico"/>
 		<Property Id="ARPPRODUCTICON" Value="AppIcon"/>
 		<Property Id="ARPURLINFOABOUT" Value="$(var.ProductURL)"/>
-		<Property Id="ARPURLUPDATEINFO" Value="$(var.ProductURL)"/>
+		<Property Id="ARPURLUPDATEINFO" Value="$(var.DownloadURL)"/>
 		<Property Id="ARPHELPLINK" Value="$(var.ProductURL)"/>
 		
 		<Property Id="INSTALLDIR">

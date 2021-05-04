@@ -35,7 +35,7 @@
 #pragma comment(linker, "/NODEFAULTLIB")
 #endif
 #elif defined(_VC_NODEFAULTLIB)
-#define _NODEFAULTLIB		_VC_NODEFAULTLIB
+#define _NODEFAULTLIB	_VC_NODEFAULTLIB
 #endif
 
 #if defined(_VC_NODEFAULTLIB) || !defined(_DEBUG) || defined(ENABLE_INTRINSICS)
@@ -399,6 +399,25 @@ __pragma(message("Unknown target platform"))
 ///////////////////////////////////////////////////////////////////////
 
 
+#ifndef countof
+#define countof(a)	_countof(a)
+#endif
+#ifndef _ARRAYSIZE
+#define _ARRAYSIZE(A)	_countof(A)
+#endif	// #ifndef _ARRAYSIZE
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(A)	_countof(A)
+#else
+#ifdef __cplusplus
+#undef ARRAYSIZE
+#define ARRAYSIZE(A)	_ARRAYSIZE(A)
+#endif
+#endif	// #ifndef ARRAYSIZE
+
+#define countof_tail(a,p)	(_countof(a) - (p - a))
+#define ARRAY_TAILSIZE(a,p)	countof_tail(a,p)
+
+
 #ifndef offsetof
 #ifdef __cplusplus
 #ifdef _WIN64
@@ -561,27 +580,14 @@ __pragma(message("Unknown target platform"))
 
 
 #define SET_ONLY_BITS(n, mask)	(0==((n)&~(mask)))
- 
 
+
+#define ELEMSIZE(A)		sizeof(A[0])
 #define bitsizeof(t)	(sizeof(t)*8)
 #define BITSIZE(t)		bitsizeof(t)
 #define wsizeof(t)		(sizeof(t)/sizeof(wchar_t))
 #define tsizeof(t)		(sizeof(t)/sizeof(TCHAR))
 #define TSIZEOF(t)		tsizeof(t)
-
-#ifndef _ARRAYSIZE
-#define _ARRAYSIZE(A)	_countof(A)
-#endif	// #ifndef _ARRAYSIZE
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(A)	_countof(A)
-#else
-#ifdef __cplusplus
-#undef ARRAYSIZE
-#define ARRAYSIZE(A)	_ARRAYSIZE(A)
-#endif
-#endif	// #ifndef ARRAYSIZE
-
-#define TYPESIZE(A)		sizeof(A[0])
 
 
 #define KILO	1024U
