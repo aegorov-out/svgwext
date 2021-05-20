@@ -41,18 +41,24 @@ protected:
 		ID2D1GdiMetafile1* m_metafile;
 	};
 	IStream* m_pstmInit;
+	volatile mutable LONG64 m_mutexLock;
 
 
 	ThumbProviderBase(_In_reads_(cProps) PCPropHandler rgProps, UINT cProps, _In_ ULONG cRef = 1)
 			: m_cRef(cRef), m_cProps(cProps), m_rgProps(rgProps) { DllAddRef(); }
-	bool IsInit() const { return AllTrue(m_d2dDC, m_unkData); }
 
+	bool IsInit() const { return AllTrue(m_d2dDC, m_unkData); }
 	UINT GetWidth() const { return wcToImageSizeU(m_sizeDips.width); }
 	UINT GetHeight() const { return wcToImageSizeU(m_sizeDips.height); }
 
+	void EnterCS() const { wcEnterInterlockedMutex(&m_mutexLock); }
+	void LeaveCS() const { wcLeaveInterlockedMutex(&m_mutexLock); }
+
 	void Release_();
+	void ClearLocked();
 	virtual void Clear();
 
+	HRESULT InitLoad(_In_ IStream* pstm);
 	virtual HRESULT InitLoad_(_In_ IStream* pstm) = 0;
 	_Success_(return == S_OK) virtual HRESULT CreateCpuReadBitmap_(D2D_SIZE_F drawSize,
 			D2D_SIZE_U targSize, _COM_Outptr_ ID2D1Bitmap1** ppbmMap) const = 0;
@@ -117,6 +123,13 @@ void ThumbProviderBase::Release_()
 		m_pstmInit->Release();
 }
 
+void ThumbProviderBase::ClearLocked()
+{
+	EnterCS();
+	Clear();
+	LeaveCS();
+}
+
 void ThumbProviderBase::Clear()
 {
 	Release_();
@@ -149,6 +162,17 @@ ULONG ThumbProviderBase::Release()
 }
 
 
+HRESULT ThumbProviderBase::InitLoad(_In_ IStream* pstm)
+{
+	HRESULT hr = WINCODEC_ERR_WRONGSTATE;
+	EnterCS();
+	if (!IsInit())
+		hr = InitLoad_(pstm);
+	LeaveCS();
+	return hr;
+}
+
+
 // IThumbnailProvider /////////////////////////////////////////////////
 
 
@@ -161,6 +185,7 @@ HRESULT ThumbProviderBase::GetThumbnail(UINT cx, __RPC__deref_out_opt HBITMAP* p
 		if (pdwAlpha)
 			*pdwAlpha = WTSAT_ARGB;
 		hr = WINCODEC_ERR_NOTINITIALIZED;
+		EnterCS();
 		if (IsInit())
 		{
 			const D2D_SIZE_F sizeF = wcScaleSizeF(m_sizeDips, cx);
@@ -188,6 +213,7 @@ HRESULT ThumbProviderBase::GetThumbnail(UINT cx, __RPC__deref_out_opt HBITMAP* p
 				}
 			}
 		}
+		LeaveCS();
 	}
 	return hr;
 }
@@ -198,8 +224,8 @@ HRESULT ThumbProviderBase::GetThumbnail(UINT cx, __RPC__deref_out_opt HBITMAP* p
 
 HRESULT ThumbProviderBase::Initialize(_In_ IStream* pstream, DWORD grfMode)
 {
-	Clear();
-	return (pstream ? InitLoad_(pstream) : E_INVALIDARG);
+	ClearLocked();
+	return (pstream ? InitLoad(pstream) : E_INVALIDARG);
 }
 
 
@@ -215,12 +241,12 @@ HRESULT ThumbProviderBase::Initialize(__RPC__in_opt IShellItem *psi, DWORD grfMo
 		hr = wcCreateStreamOnItem(psi, (BOOL)(grfMode & (STGM_WRITE|STGM_READWRITE)), &pstm);
 		if (S_OK == hr)
 		{
-			hr = InitLoad_(pstm);
+			hr = InitLoad(pstm);
 			pstm->Release();
 			return hr;
 		}
 	}
-	Clear();
+	ClearLocked();
 	return hr;
 }
 
@@ -237,12 +263,12 @@ HRESULT ThumbProviderBase::Initialize(__RPC__in_string LPCWSTR pszFilePath, DWOR
 		hr = wcCreateStreamOnFile(pszFilePath, (BOOL)(grfMode & (STGM_WRITE|STGM_READWRITE)), &pstm);
 		if (S_OK == hr)
 		{
-			hr = InitLoad_(pstm);
+			hr = InitLoad(pstm);
 			pstm->Release();
 			return hr;
 		}
 	}
-	Clear();
+	ClearLocked();
 	return hr;
 }
 
@@ -263,11 +289,14 @@ HRESULT ThumbProviderBase::GetCount(__RPC__out DWORD* pcProps)
 {
 	if (pcProps)
 	{
+		EnterCS();
 		if (IsInit())
 		{
 			*pcProps = COMMON_PROP_COUNT + m_cProps;
+			LeaveCS();
 			return S_OK;
 		}
+		LeaveCS();
 		*pcProps = 0;
 		return WINCODEC_ERR_NOTINITIALIZED;
 	}

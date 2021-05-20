@@ -521,6 +521,50 @@ WCXFASTAPI_(BOOL) wcSwitchThread(_In_opt_ UINT msSleep)
 }
 
 
+WCXFASTAPI_(BOOL) wcInterlockedMutexLock(_Inout_ volatile LONG64* threadLock, int enterLock)
+{
+	const UINT32 threadId = GetCurrentThreadId();
+	if (enterLock)
+	{
+		UINT cntr = 0;
+		const LONG64 newVal = MAKELONGLONG(threadId, 1);
+		while (LONG64 oldVal = _InterlockedCompareExchange64(threadLock, newVal, 0))
+		{
+			if ((UINT32)oldVal != threadId)
+			{
+				if (enterLock < 0)
+				{
+					if (++cntr <= 0xFFFE)
+					{
+						_mm_pause();
+						continue;
+					}
+					wcSwitchThread();
+					cntr = 0;
+					continue;
+				}
+				if (--enterLock)
+				{
+					_mm_pause();
+					continue;
+				}
+				return false;
+			}
+			((PUINT32)threadLock)[1] += 1;
+			break;
+		}
+		return true;
+	}
+	if (((PCUINT32)threadLock)[0] != threadId)
+		return false;
+	if (((PUINT32)threadLock)[1] <= 1)
+		*threadLock = 0;
+	else
+		((PUINT32)threadLock)[1] -= 1;
+	return true;
+}
+
+
 ///////////////////////////////////////////////////////////////////////
 // Error handling /////////////////////////////////////////////////////
 

@@ -27,10 +27,10 @@ protected:
 	D2D_SIZE_F m_sizeDips;
 	IWICBitmap* m_wicBitmap;
 	IStream* m_pstmInit;
-	mutable CRITICAL_SECTION m_CS;
+	volatile mutable LONG64 m_mutexLock;
 
 protected:
-	DecoderBase(_In_ ULONG cRef) : m_cRef(cRef) { DllAddRef(); wcInitCommonCS(&m_CS); }
+	DecoderBase(_In_ ULONG cRef) : m_cRef(cRef) { DllAddRef(); }
 	virtual ~DecoderBase()
 	{
 		if (m_wicBitmap)
@@ -39,13 +39,11 @@ protected:
 			m_d2dDC->Release();
 		if (m_pstmInit)
 			m_pstmInit->Release();
-		::DeleteCriticalSection(&m_CS);
 		DllRelease();
 	}
 
-	void EnterCS() const { ::EnterCriticalSection(&m_CS); }
-	BOOL TryEnterCS() const { return ::TryEnterCriticalSection(&m_CS); }
-	void LeaveCS() const { ::LeaveCriticalSection(&m_CS); }
+	void EnterCS() const { wcEnterInterlockedMutex(&m_mutexLock); }
+	void LeaveCS() const { wcLeaveInterlockedMutex(&m_mutexLock); }
 
 	UINT GetMaxBitmapSide() const { return (m_d2dDC ? m_d2dDC->GetMaximumBitmapSize() : MAX_DX_BITMAP_SIDE); }
 	_Success_(return == S_OK) HRESULT EnsureWicBitmap(_COM_Outptr_opt_result_nullonfailure_ IWICBitmap** ppBitmap = nullptr);

@@ -175,6 +175,11 @@ WCXFASTAPI_(UINT32) wcPackStdExtension4(_In_reads_(cch) PCWCH pwcExt, const UINT
 
 WCXFASTAPI_(BOOL) wcSwitchThread(_In_opt_ UINT msSleep DEFARG_(USER_TIMER_MINIMUM));
 
+WCXFASTAPI_(BOOL) wcInterlockedMutexLock(_Inout_ volatile LONG64* threadLock, int enterLock);
+#define wcEnterInterlockedMutex(threadLock)		wcInterlockedMutexLock(threadLock, -1)
+#define wcTryEnterInterlockedMutex(threadLock)	wcInterlockedMutexLock(threadLock, 1)
+#define wcLeaveInterlockedMutex(threadLock)		wcInterlockedMutexLock(threadLock, 0)
+
 _Success_(return == S_OK) WCXSTDAPI
 wcTryUncompressStream(_In_ IStream* pstmIn, BOOL headersOnly, _COM_Outptr_result_nullonfailure_ IStream** ppstmOut);
 

@@ -156,8 +156,8 @@ inline constexpr bool IsDebug() { return IS_DEBUG; }
 #define TRACEVAL(e)					((void)0)
 #define PRINTVAL(e)					((void)0)
 #define TRACEPOINT(pt)				((void)0)
-#define TRACESIZE(size)				((void)0)
-#define TRACESIZEU(size)			((void)0)
+#define TRACESIZE(Size)				((void)0)
+#define TRACESIZEU(Size)			((void)0)
 #define TRACERECT(rc)				((void)0)
 
 #endif	// ENABLE_CRT_TRACE

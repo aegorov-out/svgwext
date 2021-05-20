@@ -151,12 +151,12 @@ static NOALIAS UINT8 __fastcall ReadCompArg(_In_opt_ PCWSTR szArg)
 #define SVG_ExtendedTileInfo	"prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size"
 #define SVG_InfoTip				"prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"
 #define SVG_PreviewDetails		"prop:*System.Kind;*System.Title;*System.Comment;*System.Author;*System.Image.Dimensions;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"
-#define SVG_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;System.Title;System.Comment;*System.Author;System.Rating;System.Image.Dimensions;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
+#define SVG_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;System.Title;System.Comment;*System.Author;System.Image.Dimensions;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
 
 #define WMF_ExtendedTileInfo	"prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size"
 #define WMF_InfoTip				"prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"
 #define WMF_PreviewDetails		"prop:*System.Kind;*System.Author;*System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"
-#define WMF_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;*System.Author;System.Rating;System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
+#define WMF_FullDetails			"prop:*System.PropGroup.Description;*System.Kind;*System.Author;System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"
 
 static const PCSTR g_rgszPropListNames[PROPLIST_COUNT] {
 	"ExtendedTileInfo", "InfoTip", "PreviewDetails", "FullDetails"
@@ -481,7 +481,7 @@ void RegSvr::CloseClassKey()
 
 HRESULT RegSvr::RegisterSvgThumbs()
 {
-	HRESULT hr = RegisterServer(CLSID_SvgThumbnailProvider, "Apartment", "SVG thumbnail provider");
+	HRESULT hr = RegisterServer(CLSID_SvgThumbnailProvider, "Both", "SVG thumbnail provider");
 	if (SUCCEEDED(hr))
 	{
 		WCHAR wcClsid[MAX_GUID_STRSIZE];
@@ -501,19 +501,11 @@ HRESULT RegSvr::RegisterSvgThumbs()
 	}
 	return hr;
 }
-/*
-	if (SUCCEEDED(WritePropLists(L".emf", g_rgszWmfPropList)))
-	{
-		WritePropLists(L".emz", g_rgszWmfPropList, true);
-		if (SUCCEEDED(WritePropLists(L".wmf", g_rgszWmfPropList)))
-			WritePropLists(L".wmz", g_rgszWmfPropList, true);
-	}
-*/
 
 
 HRESULT RegSvr::RegisterWmfThumbs()
 {
-	HRESULT hr = RegisterServer(CLSID_WmfEmfThumbnailProvider, "Apartment", "WMF/EMF thumbnail provider");
+	HRESULT hr = RegisterServer(CLSID_WmfEmfThumbnailProvider, "Both", "WMF/EMF thumbnail provider");
 	if (SUCCEEDED(hr))
 	{
 		WCHAR wcClsid[MAX_GUID_STRSIZE];

@@ -4,6 +4,7 @@
 #include "SVGDecoder.h"
 #include "WMFDecoder.h"
 
+#define INTERNAL_TESTS
 
 namespace RootNamespace {
 
@@ -142,7 +143,7 @@ static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBi
 	{
 		IThumbnailProvider* thumbs;
 
-	#ifdef INTERNAL_THUMB_TEST
+	#ifdef INTERNAL_TESTS
 		IInitializeWithFile* init;
 		hr = (isSvg ? wcCreateSvgThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init))
 				: wcCreateWmfEmfThumbProvider(IID_IInitializeWithFile, PPV_ARG(&init)));
@@ -161,7 +162,7 @@ static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBi
 			}
 			init->Release();
 		}
-	#else	// INTERNAL_THUMB_TEST
+	#else	// INTERNAL_TESTS
 		IShellItem2* psi;
 		hr = ::SHCreateItemFromParsingName(szFileName, nullptr, IID_IShellItem2, PPV_ARG(&psi));
 		if (S_OK == hr)
@@ -177,7 +178,7 @@ static HRESULT TestThumbBitmap(_In_ PCWSTR szFileName, bool isSvg, HBITMAP* phBi
 				hr = __HRESULT_FROM_WIN32(ERROR_CALL_NOT_IMPLEMENTED);
 			psi->Release();
 		}
-	#endif
+	#endif	// INTERNAL_TESTS
 		if (S_OK != hr)
 		{
 			*pwAlpha = WTSAT_UNKNOWN;

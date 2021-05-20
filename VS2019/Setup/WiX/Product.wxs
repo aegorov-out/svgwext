@@ -190,7 +190,7 @@
 				
 				<RegistryKey Key="InprocServer32">
 					<RegistryValue Type="string" Value="[#MainDll]" KeyPath="yes"/>
-					<RegistryValue Type="string" Name="ThreadingModel" Value="Apartment"/>
+					<RegistryValue Type="string" Name="ThreadingModel" Value="Both"/>
 				</RegistryKey>
 			</RegistryKey>
 
@@ -254,7 +254,7 @@
 
 				<RegistryKey Key="InprocServer32">
 					<RegistryValue Type="string" Value="[#MainDll]" KeyPath="yes"/>
-					<RegistryValue Type="string" Name="ThreadingModel" Value="Apartment"/>
+					<RegistryValue Type="string" Name="ThreadingModel" Value="Both"/>
 				</RegistryKey>
 			</RegistryKey>
 

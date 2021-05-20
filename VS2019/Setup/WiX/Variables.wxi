@@ -50,11 +50,11 @@
 <?define SvgExtendedTileInfo="prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size"?>
 <?define SvgInfoTip="prop:System.ItemType;*System.Title;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"?>
 <?define SvgPreviewDetails="prop:*System.Kind;*System.Title;*System.Comment;*System.Author;*System.Image.Dimensions;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"?>
-<?define SvgFullDetails="prop:*System.PropGroup.Description;*System.Kind;System.Title;System.Comment;*System.Author;System.Rating;System.Image.Dimensions;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"?>
+<?define SvgFullDetails="prop:*System.PropGroup.Description;*System.Kind;System.Title;System.Comment;*System.Author;System.Image.Dimensions;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"?>
 <?define WmfExtendedTileInfo="prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size"?>
 <?define WmfInfoTip="prop:System.ItemType;*System.Author;*System.Image.Dimensions;System.Size;System.DateModified"?>
 <?define WmfPreviewDetails="prop:*System.Kind;*System.Author;*System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.Size;System.DateCreated;System.DateModified;*System.SharedWith"?>
-<?define WmfFullDetails="prop:*System.PropGroup.Description;*System.Kind;*System.Author;System.Rating;System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"?>
+<?define WmfFullDetails="prop:*System.PropGroup.Description;*System.Kind;*System.Author;System.Image.Dimensions;System.Image.HorizontalResolution;System.Image.VerticalResolution;System.DateCreated;System.DateModified;System.Size;System.FileAttributes;System.OfflineAvailability;System.OfflineStatus;System.SharedWith;System.FileOwner;System.ComputerName"?>
 
 <?define RegPath_Setup="Software\Microsoft\Windows\CurrentVersion"?>
 <?define RegPath_SetupNT="Software\Microsoft\Windows NT\CurrentVersion"?>
