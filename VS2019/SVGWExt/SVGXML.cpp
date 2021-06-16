@@ -237,7 +237,7 @@ static inline HRESULT GetAttributeValue(_In_ ID2D1SvgElement* pelem, _In_ PCWSTR
 	return pelem->GetAttributeValue(name, D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, value, sizeof(D2D1_SVG_VIEWBOX));
 #endif
 }
-static inline HRESULT GetAttributeValue(_In_ ID2D1SvgElement* pelem, _In_ PCWSTR name, _Out_ D2D1_SVG_LENGTH *value)
+static inline HRESULT GetAttributeValue(_In_ ID2D1SvgElement* pelem, _In_ PCWSTR name, _Out_ D2D1_SVG_LENGTH* value)
 {
 #ifdef _DEBUG
 	if (pelem->IsAttributeSpecified(name))
