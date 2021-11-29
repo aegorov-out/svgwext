@@ -105,6 +105,14 @@
 #endif	// __cplusplus	+++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+#ifndef typeof
+#define typeof(t)	decltype(t)
+#endif
+#ifndef TYPEOF
+#define TYPEOF(t)	decltype(t)
+#endif
+
+
 #ifndef NAKED
 #define NAKED		__declspec(naked)
 #endif
@@ -185,21 +193,23 @@
 #define ALIGNOF(x)		TYPE_ALIGNMENT(x)
 #define ALIGNAS(n)		alignas(n)
 #define DECLALIGN(n)	DECLSPEC_ALIGN(n)
-#define DECLALIGN4		DECLALIGN(4)
-#define DECLALIGN8		DECLALIGN(8)
-#define DECLALIGN16		DECLALIGN(16)
-#define DECLALIGN32		DECLALIGN(32)
-#define DECLALIGN64		DECLALIGN(64)
-#define DECLALIGN128	DECLALIGN(128)
-#define DECLALIGN256	DECLALIGN(256)
-#define DECLALIGN_CACHE	DECLALIGN(CPU_CACHE_LINE_SIZE)
+#define DECLALIGN_4		DECLSPEC_ALIGN(4)
+#define DECLALIGN_8		DECLSPEC_ALIGN(8)
+#define DECLALIGN_16	DECLSPEC_ALIGN(16)
+#define DECLALIGN_32	DECLSPEC_ALIGN(32)
+#define DECLALIGN_64	DECLSPEC_ALIGN(64)
+#define DECLALIGN_128	DECLSPEC_ALIGN(128)
+#define DECLALIGN_256	DECLSPEC_ALIGN(256)
+#define DECLALIGN_XMM	DECLSPEC_ALIGN(16)
+#define DECLALIGN_SSE	DECLALIGN_XMM
+#define DECLALIGN_CACHE	DECLSPEC_ALIGN(CPU_CACHE_LINE_SIZE)
 
 
-#define PUSH_MACRO(name)	__pragma(push_macro(name))
-#define POP_MACRO(name)		__pragma(pop_macro(name))
+#define PUSH_MACRO(name)	__pragma(push_macro(#name))
+#define POP_MACRO(name)		__pragma(pop_macro(#name))
 
-#define PUSH_SDKVER	PUSH_MACRO("_WIN32_IE");PUSH_MACRO("_WIN32_WINNT");PUSH_MACRO("NTDDI_VERSION")
-#define POP_SDKVER	POP_MACRO("NTDDI_VERSION");POP_MACRO("_WIN32_WINNT");POP_MACRO("_WIN32_IE")
+#define PUSH_SDKVER	PUSH_MACRO(_WIN32_IE);PUSH_MACRO(_WIN32_WINNT);PUSH_MACRO(NTDDI_VERSION)
+#define POP_SDKVER	POP_MACRO(NTDDI_VERSION);POP_MACRO(_WIN32_WINNT);POP_MACRO(_WIN32_IE)
 
 
 #define __stringize(s)	#s
@@ -456,7 +466,7 @@ __pragma(message("Unknown target platform"))
 // Excludes the last member
 #define SIZEOF_STRUCT_RANGE_TO(stname, mfirst, mlast)	(SIZEOF_STRUCT_WITHOUT(stname, mlast) - STRUCT_MEMBER_OFFSET(stname, mfirst))
 
-#define OBJECT_MEMBER_POINTER_(pobj, member)		(const volatile char*)(&((structname*)0)->member)
+#define OBJECT_MEMBER_POINTER_(pobj, member)		(const volatile char*)(&(pobj)->member)
 #define OBJECT_MEMBER_UPTR_(pobj, member)			(size_t)(&(pobj)->member)
 #ifndef OBJECT_MEMBER_OFFSET
 #define OBJECT_MEMBER_OFFSET(pobj, member)			(OBJECT_MEMBER_UPTR_(pobj, member) - (size_t)(pobj))

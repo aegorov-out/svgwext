@@ -83,6 +83,21 @@ bool AnyTrue(const T1 a, const T2 b, const T3 c, const T4 d, const T5 e)
 }
 
 
+template<class T>
+_Check_return_ _Post_satisfies_(return == false || (val >= low && val <= high))
+bool IsInRange(const T val, const T low, const T high)
+{
+	return (val >= low) & (val <= high);
+}
+
+template<class T>
+_Check_return_ _Post_satisfies_(return == false || (val > low && val < high))
+bool IsBetween(const T val, const T low, const T high)
+{
+	return (val > low) & (val < high);
+}
+
+
 template <typename _N> _N SetBit(_N var, _N mask, bool set)
 {
 	return (var & ~mask) | ((_N)(-(int)(signed char)set) & mask);
@@ -110,6 +125,22 @@ template <class _T> unsigned __int64 ToUInt64(const _T& x)
 {
 	STATIC_ASSERT(sizeof(_T) >= sizeof(unsigned __int64));
 	return *reinterpret_cast<const unsigned __int64*>(&x);
+}
+
+template <class _T> unsigned __int8 ToUInt8s(const _T x)
+{
+	STATIC_ASSERT(sizeof(_T) >= sizeof(unsigned __int8));
+	return (x <= 0xFF) ? static_cast<unsigned __int8>(x) : 0xFF;
+}
+template <class _T> unsigned __int16 ToUInt16s(const _T x)
+{
+	STATIC_ASSERT(sizeof(_T) >= sizeof(unsigned __int16));
+	return (x <= 0xFFFF) ? static_cast<unsigned __int16>(x) : 0xFFFF;
+}
+template <class _T> unsigned __int32 ToUInt32s(const _T x)
+{
+	STATIC_ASSERT(sizeof(_T) >= sizeof(unsigned __int32));
+	return (x <= 0xFFFFFFFF) ? static_cast<unsigned __int32>(x) : 0xFFFFFFFF;
 }
 
 

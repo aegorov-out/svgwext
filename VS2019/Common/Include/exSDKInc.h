@@ -11,7 +11,27 @@
 #define _CMN_WINSDK_INCLUDED_
 
 
-#if defined(WINSDK_VB) || defined(WINSDK_19H2) || defined(WINSDK_1909) || (WINSDK_VERSION >= 0x0A000008)
+#if defined(WINSDK_21H2) || (WINSDK_VERSION >= 0x0A00000C)
+// Build 19044
+#define NTDDI_VERSION	0x0A00000C
+#define _WIN32_WINNT	0x0A00
+#define _WIN32_IE		0x0A00
+#elif defined(WINSDK_CO) || defined(WINSDK_21H1) || (WINSDK_VERSION >= 0x0A00000B)
+// Build 19043
+#define NTDDI_VERSION	0x0A00000B
+#define _WIN32_WINNT	0x0A00
+#define _WIN32_IE		0x0A00
+#elif defined(WINSDK_FE) || defined(WINSDK_20H2) || (WINSDK_VERSION >= 0x0A00000A)
+// Build 19042
+#define NTDDI_VERSION	0x0A00000A
+#define _WIN32_WINNT	0x0A00
+#define _WIN32_IE		0x0A00
+#elif defined(WINSDK_MN) || defined(WINSDK_20H1) || defined(WINSDK_2004) || (WINSDK_VERSION >= 0x0A000009)
+// Build 19041
+#define NTDDI_VERSION	0x0A000009
+#define _WIN32_WINNT	0x0A00
+#define _WIN32_IE		0x0A00
+#elif defined(WINSDK_VB) || defined(WINSDK_19H2) || defined(WINSDK_1909) || (WINSDK_VERSION >= 0x0A000008)
 // Build 18363
 #define NTDDI_VERSION	0x0A000008
 #define _WIN32_WINNT	0x0A00
@@ -66,7 +86,7 @@
 #define NTDDI_VERSION	0x06020000
 #define _WIN32_WINNT	0x0602
 #define _WIN32_IE		0x0A00
-#elif defined(WINSDK_WIN7) || (defined (WINSDK_VERSION) && (WINSDK_VERSION <= 0x06010000))
+#elif defined(WINSDK_WIN7) || (defined(WINSDK_VERSION) && (WINSDK_VERSION <= 0x06010000))
 // Version 6.1 Build >= 7100
 #define NTDDI_VERSION	0x06010000
 #define _WIN32_WINNT	0x0601

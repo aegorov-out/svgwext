@@ -172,6 +172,17 @@ typedef BOOL(CALLBACK* PARAM_CALLBACK_PROC)(void*);
 #endif
 
 
+#if defined(KEY_READ) && defined(KEY_WRITE)
+#ifdef __cplusplus
+constexpr REGSAM REGSAM_READ = (KEY_READ & ~KEY_NOTIFY);
+constexpr REGSAM REGSAM_WRITE = (CPP_COMMONS(REGSAM_READ) | KEY_WRITE);
+#else
+#define REGSAM_READ		(KEY_READ & ~KEY_NOTIFY)
+#define REGSAM_WRITE	(REGSAM_READ | KEY_WRITE)
+#endif
+#endif
+
+
 // Misc. //////////////////////////////////////////////////////////////
 
 
@@ -393,6 +404,24 @@ INLINE UINT StringFromGUID(_In_ REFGUID rguid, _Out_writes_to_(cchMax, return-1)
 #ifdef __cplusplus	// ++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+inline bool operator==(FILETIME ft1, FILETIME ft2)
+{
+#ifdef _WIN64
+	return *(const UINT64*)(&ft1) == *(const UINT64*)(&ft2);
+#else
+	return (ft1.dwLowDateTime == ft2.dwLowDateTime) & (ft1.dwHighDateTime == ft2.dwHighDateTime);
+#endif
+}
+inline bool operator!=(FILETIME ft1, FILETIME ft2)
+{
+#ifdef _WIN64
+	return *(const UINT64*)(&ft1) != *(const UINT64*)(&ft2);
+#else
+	return (ft1.dwLowDateTime != ft2.dwLowDateTime) | (ft1.dwHighDateTime != ft2.dwHighDateTime);
+#endif
+}
+
+
 #ifndef _SYS_GUID_OPERATOR_EQ_
 #define _SYS_GUID_OPERATOR_EQ_
 
@@ -400,7 +429,6 @@ inline bool operator==(const GUID& guidOne, const GUID& guidOther)
 {
     return ::InlineIsEqualGUID(guidOne, guidOther);
 }
-
 inline bool operator!=(const GUID& guidOne, const GUID& guidOther)
 {
     return !::InlineIsEqualGUID(guidOne, guidOther);
@@ -742,6 +770,11 @@ inline bool operator >=(const SIZE a, const SIZE b)
 
 
 // Helper wrappers ////////////////////////////////////////////////////
+
+
+#ifdef __cplusplus
+#define GET_PROC_ADDRESS(hModule, FuncName)	reinterpret_cast<decltype(&::##FuncName)>(::GetProcAddress(hModule, #FuncName))
+#endif
 
 
 inline HRESULT Stream_Size(_In_ IStream* pstm, _Out_ PULONGLONG pcb)
