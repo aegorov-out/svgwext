@@ -120,6 +120,9 @@
 #include <immintrin.h>
 #include <intsafe.h>
 #include <combaseapi.h>
+#ifndef NO_SHELLAPI
+#include <shellapi.h>
+#endif
 #ifndef _CRT_FUNCTIONS_REQUIRED
 #define _CRT_FUNCTIONS_REQUIRED		1
 #endif

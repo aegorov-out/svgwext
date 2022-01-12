@@ -235,21 +235,30 @@ INLINE __m128i VECTORCALL mm_rgb_blend_si128(_In_ __m128i src32, _In_ __m128i ds
 			_mm_mullo_epi16(_mm_xor_si128(_pi16_255, epi16alpha), dst32)), 8), _mm_extract_epi16(dst32, 3), 3), dst32);
 }
 
-INLINE COLORREF ColorBlend50(COLORREF cr1, COLORREF cr2)
+INLINE COLORREF __fastcall ColorBlend50(COLORREF cr1, COLORREF cr2)
 {
 	return (COLORREF)_mm_cvtsi128_si32(_mm_avg_epu8(_mm_cvtsi32_si128((INT32)cr1), _mm_cvtsi32_si128((INT32)cr2)));
+}
+
+
+INLINE BOOLEAN __fastcall IsAttrubuteDirectory(DWORD dwAttr)
+{
+#if (FILE_ATTRIBUTE_DIRECTORY > UINT8_MAX)
+	#error Use wider variable to store FILE_ATTRIBUTE_DIRECTORY
+#endif
+	return ((BOOLEAN)dwAttr & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 
 #ifdef _PROPVARIANTINIT_DEFINED_
 
 #ifdef __cplusplus
-inline bool PropVariantIsEmpty(const PROPVARIANT& pv)
+inline bool __fastcall PropVariantIsEmpty(const PROPVARIANT& pv)
 {
 	return ((unsigned short)pv.vt <= VT_NULL);	// VT_EMPTY or VT_NULL
 }
 #else
-__inline BOOLEAN PropVariantIsEmpty(const PROPVARIANT* pv)
+__inline _Bool __fastcall PropVariantIsEmpty(const PROPVARIANT* pv)
 {
 	return ((unsigned short)pv->vt <= VT_NULL);	// VT_EMPTY or VT_NULL
 }
@@ -268,6 +277,32 @@ __inline BOOLEAN PropVariantIsEmpty(const PROPVARIANT* pv)
 
 
 // Safe release ///////////////////////////////////////////////////////
+
+
+INLINE ULONG SafeAddRef(_In_opt_ IUnknown* punk)
+{
+	return (punk ?
+	#if defined(__cplusplus) && !defined(CINTERFACE)
+		punk->AddRef()
+	#else
+		punk->lpVtbl->AddRef(punk)
+	#endif
+		: 0);
+}
+INLINE ULONG GetUnkRefCount(_In_opt_ IUnknown* punk)
+{
+	if (punk)
+	{
+	#if defined(__cplusplus) && !defined(CINTERFACE)
+		punk->AddRef();
+		return punk->Release();
+	#else
+		punk->lpVtbl->AddRef(punk);
+		return punk->lpVtbl->Release(punk);
+	#endif
+	}
+	return 0;
+}
 
 
 INLINE void SafeStrFree(wchar_t** pps)
@@ -310,37 +345,21 @@ INLINE void SafeRegCloseKey(PHKEY phk)
 	if (hk) CPP_GLOBAL(RegCloseKey(hk));
 }
 
-INLINE void SafeDeleteObject(_Inout_ HGDIOBJ* phGdiObj)
+INLINE void __fastcall SafeDeleteObject(_Inout_ HGDIOBJ* phObj)
 {
-	const HGDIOBJ hobj = *phGdiObj;
-	*phGdiObj = NULL;
-	if (hobj) CPP_GLOBAL(DeleteObject(hobj));
+	const HGDIOBJ hobj = *phObj;
+	*phObj = NULL;
+	if (hobj)
+		CPP_GLOBAL(DeleteObject(hobj));
 }
 
-
-INLINE ULONG SafeAddRef(_In_opt_ IUnknown* punk)
+INLINE void __fastcall SafeDestroyWindow(_Inout_ HWND* phWnd)
 {
-	return (punk ?
-#if defined(__cplusplus) && !defined(CINTERFACE)
-		punk->AddRef()
-#else
-		punk->lpVtbl->AddRef(punk)
-#endif
-		: 0);
-}
-INLINE ULONG GetUnkRefCount(_In_opt_ IUnknown* punk)
-{
-	if (punk)
+	if (*phWnd)
 	{
-#if defined(__cplusplus) && !defined(CINTERFACE)
-		punk->AddRef();
-		return punk->Release();
-#else
-		punk->lpVtbl->AddRef(punk);
-		return punk->lpVtbl->Release(punk);
-#endif
+		CPP_GLOBAL(DestroyWindow(*phWnd));
+		*phWnd = NULL;	// DO NOT clear HWND until WM_DESTROY is handled!
 	}
-	return 0;
 }
 
 
@@ -769,12 +788,11 @@ inline bool operator >=(const SIZE a, const SIZE b)
 }
 
 
+///////////////////////////////////////////////////////////////////////
 // Helper wrappers ////////////////////////////////////////////////////
 
 
-#ifdef __cplusplus
 #define GET_PROC_ADDRESS(hModule, FuncName)	reinterpret_cast<decltype(&::##FuncName)>(::GetProcAddress(hModule, #FuncName))
-#endif
 
 
 inline HRESULT Stream_Size(_In_ IStream* pstm, _Out_ PULONGLONG pcb)
@@ -805,4 +823,59 @@ inline HRESULT Stream_SeekStart(_In_ IStream* pstm)
 
 
 #endif	// __cplusplus	+++++++++++++++++++++++++++++++++++++++++++++++
+
+
+///////////////////////////////////////////////////////////////////////
+// Window etc. helpers ////////////////////////////////////////////////
+
+
+#if defined(__cplusplus) && defined(_INC_SHELLAPI)
+#define UIX_MAX_LABEL_TEXT	ARRAYSIZE(NOTIFYICONDATAW::szTip)
+#else
+#define UIX_MAX_LABEL_TEXT	128
+#endif
+
+
+#define GetWindowStyle(hwnd)			(DWORD)CPP_GLOBAL(GetWindowLongW(hwnd,GWL_STYLE))
+#define GetWndStyle(hwnd)				GetWindowStyle(hwnd)
+#define SetWindowStyle(hwnd,style)		CPP_GLOBAL(SetWindowLongW(hwnd,GWL_STYLE,(LONG)(style)))
+#define SetWndStyle(hwnd,style)			SetWindowStyle(hwnd,style)
+#define GetWndExStyle(hwnd)				(DWORD)CPP_GLOBAL(GetWindowLongW(hwnd,GWL_EXSTYLE))
+#define GetWindowExStyle(hwnd)			GetWndStyle(hwnd)
+#define SetWindowExStyle(hwnd,style)	CPP_GLOBAL(SetWindowLongW(hwnd,GWL_EXSTYLE,(LONG)(style)))
+#define HasWndStyle(hwnd,style)			(CPP_GLOBAL(GetWindowLongW(hwnd,GWL_STYLE)) & (style))
+#define HasWndExStyle(hwnd,style)		(CPP_GLOBAL(GetWindowLongW(hwnd,GWL_EXSTYLE)) & (style))
+#define GetWndClassStyle(hwnd)			CPP_GLOBAL(GetClassLongW(hwnd, GCL_STYLE))
+#define GetWindowClassStyle(hwnd)		GetWndClassStyle(hwnd)	
+#define GetWndUserData(hwnd)			CPP_GLOBAL(GetWindowLongPtrW(hwnd,GWLP_USERDATA))
+#define SetWndUserData(hwnd,data)		CPP_GLOBAL(SetWindowLongPtrW(hwnd,GWLP_USERDATA,(LONG_PTR)(data)))
+#define GetWndProc(hwnd)				(WNDPROC)CPP_GLOBAL(GetWindowLongPtrW(hwnd,GWLP_WNDPROC))
+#define SetWndProc(hwnd,pfn)			(WNDPROC)CPP_GLOBAL(SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(LONG_PTR)(WNDPROC)pfn))
+#define GetWndID(hwnd)					CPP_GLOBAL(GetWindowLongW(hwnd,GWL_ID))
+#define SetWndID(hwnd,newid)			CPP_GLOBAL(SetWindowLongW(hwnd,GWL_ID,(LONG)(newid)))
+#define SetWindowId(hwnd,newid)			SetWndID(hwnd,newid)
+#define IsWndHidden(hwnd)				(!HasWndStyle(hwnd,WS_VISIBLE))
+#define IsWndVisible(hwnd)				(WS_VISIBLE == (CPP_GLOBAL(GetWindowLongW(hwnd, GWL_STYLE)) & (WS_VISIBLE|WS_MINIMIZE)))
+
+#ifndef SCREENTOCLIENT_IMPORT
+#define ScreenToClient(hwnd, ppt)		CPP_GLOBAL(MapWindowPoints(HWND_DESKTOP,hwnd,ppt,1))
+#endif
+#ifndef CLIENTTOSCREEN_IMPORT
+#define ClientToScreen(hwnd, ppt)		CPP_GLOBAL(MapWindowPoints(hwnd,HWND_DESKTOP,ppt,1))
+#endif
+#define ScreenRectToClient(hwnd, prc)	CPP_GLOBAL(MapWindowPoints(HWND_DESKTOP,hwnd,(LPPOINT)(LPRECT)(prc),2))
+#define ScreenToClientRect(hwnd, prc)	CPP_GLOBAL(MapWindowPoints(HWND_DESKTOP,hwnd,(LPPOINT)(LPRECT)(prc),2))
+#define ClientToScreenRect(hwnd, prc)	CPP_GLOBAL(MapWindowPoints(hwnd,HWND_DESKTOP,(LPPOINT)(LPRECT)(prc),2))
+#define ClientRectToScreen(hwnd, prc)	CPP_GLOBAL(MapWindowPoints(hwnd,HWND_DESKTOP,(LPPOINT)(LPRECT)(prc),2))
+
+#define GetNextWndSibling(hwnd)			CPP_GLOBAL(GetWindow(hwnd,GW_HWNDNEXT))
+#define GetPrevWndSibling(hwnd)			CPP_GLOBAL(GetWindow(hwnd,GW_HWNDPREV))
+#define GetFirstWndSibling(hwnd)		CPP_GLOBAL(GetWindow(hwnd,GW_HWNDFIRST))
+#define GetLastWndSibling(hwnd)			CPP_GLOBAL(GetWindow(hwnd,GW_HWNDLAST))
+#define GetFirstWndChild(hwnd)			CPP_GLOBAL(GetWindow(hwnd,GW_CHILD))
+
+
+INLINE bool_t __fastcall IsWindowValidTabStop(_In_ HWND hwnd)	{
+	return ((WS_TABSTOP|WS_VISIBLE) == (GetWindowStyle(hwnd) & (WS_TABSTOP|WS_VISIBLE|WS_DISABLED)));
+}
 

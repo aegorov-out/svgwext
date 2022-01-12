@@ -44,6 +44,27 @@ INLINE bool_t __fastcall IsAsciiAlphaW(wchar_t wc) {
 #define ISALPHA(ch)			IsAsciiAlpha(ch)
 
 
+INLINE bool_t __fastcall StringIsValidA(_In_opt_ const char* s) { return (s && s[0]); }
+INLINE bool_t __fastcall StringIsValidW(_In_opt_ const wchar_t* s) { return (s && s[0]); }
+#ifdef __cplusplus
+template<typename _CT> inline bool __fastcall StringIsValid(_In_opt_ const _CT* s) { return (s && s[0]); }
+#elif defined(UNICODE)
+#define StringIsValid	StringIsValidW
+#else
+#define StringIsValid	StringIsValidA
+#endif
+
+INLINE bool_t __fastcall StringIsEmptyA(_In_opt_ const char* s) { return !(s && s[0]); }
+INLINE bool_t __fastcall StringIsEmptyW(_In_opt_ const wchar_t* s) { return !(s && s[0]); }
+#ifdef __cplusplus
+template<typename _CT> inline bool __fastcall StringIsEmpty(_In_opt_ const _CT* s) { return !(s && s[0]); }
+#elif defined(UNICODE)
+#define StringIsEmpty	StringIsEmptyW
+#else
+#define StringIsEmpty	StringIsEmptyA
+#endif
+
+
 INLINE void __fastcall uswap32(__inout unsigned __int32* pdw1, __inout unsigned __int32* pdw2)
 {
 	*pdw1 ^= *pdw2;
@@ -268,6 +289,10 @@ __inline void* __fastcall dmemchr(const void* pd, unsigned __int32 d, size_t cd)
 #endif
 #ifndef heapmin
 #define heapmin()		(void)_heapmin()
+#endif
+
+#ifndef onstack_
+#define onstack_(name)	(name*)_alloca(sizeof(name))
 #endif
 
 

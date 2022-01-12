@@ -423,6 +423,8 @@ __pragma(message("Unknown target platform"))
 #define ARRAYSIZE(A)	_ARRAYSIZE(A)
 #endif
 #endif	// #ifndef ARRAYSIZE
+#define countof32(a)	((unsigned)countof(a))
+#define ARRAYSIZE32(a)	((unsigned)ARRAYSIZE(a))
 
 #define countof_tail(a,p)	(_countof(a) - (p - a))
 #define ARRAY_TAILSIZE(a,p)	countof_tail(a,p)
@@ -499,13 +501,13 @@ __pragma(message("Unknown target platform"))
 #define ALIGN(data,n)		(((data)+(n)-1) & ~((n)-1))
 #define ALIGN_SIZE(data,n)	(((size_t)(data)+(n)-1) & ~((n)-1))
 #define ALIGN_PTR(data,n)	ALIGN_SIZE(data,n)
-#define ALIGN2(data)		ALIGN(data,2)
-#define ALIGN4(data)		ALIGN(data,4)
-#define ALIGN8(data)		ALIGN(data,8)
-#define ALIGN16(data)		ALIGN(data,16)
-#define ALIGN32(data)		ALIGN(data,32)
-#define ALIGN64(data)		ALIGN(data,64)
-#define ALIGN128(data)		ALIGN(data,128)
+#define ALIGN_2(data)		ALIGN(data,2)
+#define ALIGN_4(data)		ALIGN(data,4)
+#define ALIGN_8(data)		ALIGN(data,8)
+#define ALIGN_16(data)		ALIGN(data,16)
+#define ALIGN_32(data)		ALIGN(data,32)
+#define ALIGN_64(data)		ALIGN(data,64)
+#define ALIGN_128(data)		ALIGN(data,128)
 #define ALIGN2_PTR(data)	ALIGN_PTR(data,2)
 #define ALIGN4_PTR(data)	ALIGN_PTR(data,4)
 #define ALIGN8_PTR(data)	ALIGN_PTR(data,8)
@@ -560,7 +562,7 @@ __pragma(message("Unknown target platform"))
 
 #define MIN_(a, b)		(((a)<=(b))?(a):(b))
 #define MAX_(a, b)		(((a)>=(b))?(a):(b))
-#define ABS_(i)			(((i) >= 0) ? (i) : -(i))
+#define ABS_(i)			(((i)>=0)?(i):-(i))
 #define ulabs(i)		(unsigned)labs((long)(i))
 #define uabs(i)			ulabs(i)
 #define ulabs64(ll)		(unsigned long long)llabs((long long)(ll))
@@ -854,6 +856,10 @@ typedef union __ex_code_location_stamp64 {
 #define __TFILE_TITLE__		__FILE_TITLE__
 #endif
 
+
+#if defined(INTERNAL_BRANDING) || defined(AE_BRANDING)
+#include "exVBrand.h"
+#endif
 
 #include "exCTDExt.inl"
 
